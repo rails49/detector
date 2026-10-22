@@ -8,7 +8,7 @@ Three conversions, each of which can fail in a way the next stage would hide:
 
    ⚠️ **`TopK` selects; it does not suppress.** This file used to claim the head
    deduplicated in-graph, and that the browser therefore needed no NMS. Measured
-   across the fixture corpus (issue #107) that is false: fp32 emits 130 boxes
+   across the fixture corpus (rails49/occupancy#107) that is false: fp32 emits 130 boxes
    over 87 distinct vehicles and INT8 139 over 89 — up to four boxes on one car,
    with quantization exonerated, since both rates match. Suppression now happens
    in `lib/detector/src/decode.ts`, class-agnostic, at `detector.nms_iou`. If a
@@ -22,7 +22,7 @@ Three conversions, each of which can fail in a way the next stage would hide:
 3. **`.ort` conversion**, the format `onnxruntime-web` loads.
 
 All three were verified end-to-end on the released DOTA weights during the
-feasibility research (issue #3); this script is that path, run on trained
+feasibility research (rails49/occupancy#3); this script is that path, run on trained
 weights instead. Expect ~3.3 MiB out.
 
 Usage:
@@ -97,7 +97,7 @@ class FrameCalibrationReader(CalibrationDataReader):
         # so a frame preprocessed differently from the deployed one calibrates the
         # model for a distribution it will never be given. Worth 2 px per edge on
         # today's 1920x1080 corpus; worth 42 px bars at the intended capture
-        # geometry (~4440x2130, aspect 2.08:1). See issue #100.
+        # geometry (~4440x2130, aspect 2.08:1). See rails49/occupancy#100.
         image = letterboxed(Image.open(path).convert("RGB"), (width, height))
         array = np.asarray(image, dtype=np.float32) / 255.0
         return np.transpose(array, (2, 0, 1))[np.newaxis, ...]
@@ -135,7 +135,7 @@ def main() -> None:
         "--calibration-frames",
         type=int,
         default=10,
-        help="Ten sufficed in the #3 research; more costs quantization time for little gain.",
+        help="Ten sufficed in the rails49/occupancy#3 research; more costs quantization time for little gain.",
     )
     args = parser.parse_args()
 
@@ -252,7 +252,7 @@ def main() -> None:
             # *rectangular* export is not a given, so it is asserted rather than
             # assumed — but note what it does NOT buy: the slots are selected,
             # not deduplicated, and the browser suppresses duplicates itself
-            # (issue #107). This count is therefore boxes, not vehicles.
+            # (rails49/occupancy#107). This count is therefore boxes, not vehicles.
             if result.shape != (1, 300, 7):
                 raise SystemExit(
                     f"{model.name}: expected the end2end head's (1, 300, 7) output, "

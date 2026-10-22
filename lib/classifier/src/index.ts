@@ -1,4 +1,4 @@
-// Public interface of @occupancy/classifier (root entry point).
+// Public interface of @detector/classifier (root entry point).
 //
 // This file is the package's interface — the only surface consumers may rely
 // on. Anything not exported here is internal and may change without notice.
@@ -8,8 +8,8 @@
 // The classifiers themselves live behind platform-specific entry points, so
 // that `onnxruntime-node` and `sharp` never reach a browser bundle:
 //
-//   import { BrowserClassifier } from '@occupancy/classifier/browser';
-//   import { NodeClassifier }    from '@occupancy/classifier/node';
+//   import { BrowserClassifier } from '@detector/classifier/browser';
+//   import { NodeClassifier }    from '@detector/classifier/node';
 
 //── Configuration ────────────────────────────────────────────────────────────
 // Shape of the model config both classifiers are constructed with. Produced by

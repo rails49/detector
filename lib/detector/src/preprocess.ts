@@ -10,9 +10,9 @@ export const PAD_GRAY = 'rgb(114, 114, 114)';
  * Structural rather than `CanvasRenderingContext2D` so this is testable: no
  * test environment in this repo can execute `drawImage` and read the pixels
  * back — `ui` runs in jsdom where canvas is a stub, `lib/*` run in bare node,
- * and `@web/test-runner` was removed deliberately (#109). What a fake can
+ * and `@web/test-runner` was removed deliberately (rails49/occupancy#109). What a fake can
  * still pin is that the context is *configured* the way the model was trained,
- * which is exactly the bug this module exists for (#132). It does not pin the
+ * which is exactly the bug this module exists for (rails49/occupancy#132). It does not pin the
  * resulting pixels; nothing here can.
  */
 export interface LetterboxTarget {
@@ -38,10 +38,10 @@ export interface LetterboxTarget {
  * letterboxed into the middle.
  *
  * **The resampling filter is pinned here, and that is the point of the
- * function** (#132). Left unset, `drawImage` resamples with whatever the user
+ * function** (rails49/occupancy#132). Left unset, `drawImage` resamples with whatever the user
  * agent picks, so the app disagrees with its own training data *and* two
  * deployed devices disagree with each other — and this app explicitly targets
- * both a phone and a laptop. #112 measured the size of that: 36% recall
+ * both a phone and a laptop. rails49/occupancy#112 measured the size of that: 36% recall
  * bilinear against 31% area-averaged, identical frames, identical weights.
  *
  * `'low'` is the bilinear end of the three qualities, and bilinear is what the
@@ -58,12 +58,12 @@ export interface LetterboxTarget {
  * than inherited: it survives a context reset, it cannot be silently moved by
  * another caller, and changing it is a decision someone makes on purpose.
  * Genuinely pinning the *filter* across user agents would mean resampling
- * ourselves rather than asking `drawImage` to — still open on #132, and not
+ * ourselves rather than asking `drawImage` to — still open on #7, and not
  * something a fake can measure either.
  *
  * Set on every call rather than once at construction because **sizing a canvas
  * resets its 2D context state**. Today's canvas is sized once, so hoisting
- * would work today — but the DPT-normalized pipeline (#130) makes the input
+ * would work today — but the DPT-normalized pipeline (rails49/occupancy#130) makes the input
  * grid a thing that changes, and a filter that silently unpins itself on
  * resize is the same bug again with a longer fuse. Two property writes per
  * frame is not a cost worth that.

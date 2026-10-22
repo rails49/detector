@@ -1,4 +1,4 @@
-# @occupancy/classifier
+# @detector/classifier
 
 Runs the trained occupancy CNN over a layout photograph. Given a point on the
 image and the image's resolution, it crops a patch around that point, scales it
@@ -14,9 +14,9 @@ Three entry points, each with its own surface:
 
 | Import | Provides |
 | :--- | :--- |
-| `@occupancy/classifier` | `ClassifierConfig` — the model config both classifiers take |
-| `@occupancy/classifier/browser` | `BrowserClassifier` — ONNX Runtime Web, crops via `<canvas>` |
-| `@occupancy/classifier/node` | `NodeClassifier` — ONNX Runtime Node, crops via `sharp` |
+| `@detector/classifier` | `ClassifierConfig` — the model config both classifiers take |
+| `@detector/classifier/browser` | `BrowserClassifier` — ONNX Runtime Web, crops via `<canvas>` |
+| `@detector/classifier/node` | `NodeClassifier` — ONNX Runtime Node, crops via `sharp` |
 
 The split is deliberate and load-bearing: importing the root entry point never
 pulls `onnxruntime-node` or `sharp` into a browser bundle. Import the platform
@@ -36,7 +36,7 @@ another package in this monorepo:
 
 ```json
 "dependencies": {
-  "@occupancy/classifier": "workspace:*"
+  "@detector/classifier": "workspace:*"
 }
 ```
 
@@ -45,8 +45,8 @@ another package in this monorepo:
 In the browser:
 
 ```typescript
-import { BrowserClassifier } from '@occupancy/classifier/browser';
-import type { ClassifierConfig } from '@occupancy/classifier';
+import { BrowserClassifier } from '@detector/classifier/browser';
+import type { ClassifierConfig } from '@detector/classifier';
 
 const config: ClassifierConfig = await (await fetch('/models/config.json')).json();
 const classifier = new BrowserClassifier(config);

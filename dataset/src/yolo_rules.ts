@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
-import { DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@occupancy/config';
+import { DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@detector/config';
 import { carWidthPx, detectorClassIndex, spanToPolygon } from '@rails49/detector';
 import { getDPT, type ManifestData } from '@rails49/r49';
 

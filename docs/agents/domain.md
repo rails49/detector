@@ -4,7 +4,7 @@ How the engineering skills should consume this repo's domain documentation when 
 
 Single context. The UI, L1 and drift are in [rails49/occupancy](https://github.com/rails49/occupancy), whose docs own their terms and decisions. What each kind of doc holds, and how ADRs change, is set by org [ADR-0021](https://github.com/rails49/.github/blob/main/docs/adr/0021-each-fact-has-one-owner-and-the-glossary-is-glossary-md.md). [ADR 0001](../adr/0001-glossary-and-adrs-alongside-the-spec.md) adds `SPEC.md` for the requirements.
 
-The wayfinder maps (label `wayfinder:map`) in rails49/occupancy and their closed tickets hold the alternatives that were rejected; an ADR links them rather than restating them.
+Each repository keeps its own wayfinder maps (label `wayfinder:map`). Here, #2 is the accuracy campaign. The closed maps in rails49/occupancy and their tickets hold the alternatives rejected before the split. An ADR links them rather than restating them.
 
 ## Before exploring, read these
 

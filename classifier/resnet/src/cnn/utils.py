@@ -26,7 +26,7 @@ def load_r49_data():
     """Loads the .r49 format's data file: gauge, scales and vocabulary.
 
     They are the format's, not this project's, so they are read from the
-    pinned @rails49/r49 package rather than config.yaml (ADR 0018).
+    pinned @rails49/r49 package rather than config.yaml (org ADR-0022).
     """
     data_path = os.path.abspath(
         os.path.join(

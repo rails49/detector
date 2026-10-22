@@ -6,11 +6,11 @@ import { PAD_GRAY, paintLetterbox, type LetterboxTarget } from '../src/preproces
  * Painting the input grid, driven by a fake context.
  *
  * What this can pin is that the context is *configured* the way the model was
- * trained — the resampling filter above all (#132) — and that the paint happens
+ * trained — the resampling filter above all (rails49/occupancy#132) — and that the paint happens
  * in the right order at the right place. What it cannot pin is the resulting
  * pixels: no test environment here executes `drawImage` and reads them back
- * (`ui` is jsdom, `lib/*` is bare node, `@web/test-runner` went in #109). That
- * gap is the open half of #132 and no fake closes it.
+ * (`ui` is jsdom, `lib/*` is bare node, `@web/test-runner` went in rails49/occupancy#109). That
+ * gap is open on #7 and no fake closes it.
  */
 
 const GRID = { width: 960, height: 544 };
@@ -70,9 +70,9 @@ const paint = (frame: { width: number; height: number }, ctx = new Recorder()) =
 
 describe('the resampling filter', () => {
   it('is requested explicitly, whatever the context arrived holding', () => {
-    // The bug (#132): the filter was never stated, so a context that had been
+    // The bug (rails49/occupancy#132): the filter was never stated, so a context that had been
     // touched — or a UA whose initial value is not the spec's — resampled the
-    // model's input differently from every other one. #112 measured what that
+    // model's input differently from every other one. rails49/occupancy#112 measured what that
     // costs: 36% recall bilinear against 31% area-averaged, identical frames
     // and identical weights.
     const draw = paint({ width: 1920, height: 1080 }).ops.find((op) => op.name === 'drawImage');
@@ -83,7 +83,7 @@ describe('the resampling filter', () => {
 
   it('is re-pinned on every call, because sizing a canvas resets the context', () => {
     // Today's canvas is sized once, so hoisting to the constructor would work —
-    // but the DPT-normalized pipeline (#130) makes the grid a thing that
+    // but the DPT-normalized pipeline (rails49/occupancy#130) makes the grid a thing that
     // changes, and a filter that silently unpins itself on resize is this same
     // bug with a longer fuse. A context reset between calls stands in for it.
     const ctx = new Recorder();

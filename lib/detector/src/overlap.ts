@@ -3,7 +3,7 @@
  *
  * Its own module, importing nothing: this is plane geometry over convex
  * quadrilaterals, and both callers want it for different reasons — the decode
- * suppresses duplicates with it (issue #107), and the UI's archive diagnostics
+ * suppresses duplicates with it (rails49/occupancy#107), and the UI's archive diagnostics
  * match predictions to labels with it. It moved down here from
  * occupancy's `ui/src/diagnostics.ts` when the second caller appeared, which is the bar
  * this package's interface note sets for promoting anything.

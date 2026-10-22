@@ -156,7 +156,7 @@ describe('the report frame', () => {
   });
 });
 
-describe('duplicate suppression (#107)', () => {
+describe('duplicate suppression (rails49/occupancy#107)', () => {
   const map = () => gridToReport(GRID, GRID, GRID);
 
   it('keeps only the most confident of several boxes on one car', () => {

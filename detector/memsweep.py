@@ -1,4 +1,4 @@
-"""Peak MPS memory for YOLO26{l,x}-obb, fp32, training and inference (#128).
+"""Peak MPS memory for YOLO26{l,x}-obb, fp32, training and inference (rails49/occupancy#128).
 
     PYTORCH_MPS_HIGH_WATERMARK_RATIO=1.0 PYTORCH_MPS_LOW_WATERMARK_RATIO=1.0 \
         uv run python memsweep.py sweep --out runs/memsweep/results.jsonl

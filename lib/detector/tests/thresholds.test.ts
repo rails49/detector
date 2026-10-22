@@ -27,7 +27,7 @@ describe("the detector's thresholds", () => {
   });
 
   it('keep the values config.yaml authors', async () => {
-    // config.yaml still owns the numbers until the split (ADR 0019): the
+    // config.yaml still owns the numbers until the split (occupancy ADR 0019): the
     // exporter reads `confidence_threshold` from it in Python.
     const root = await import('../src/index.ts');
     expect(root.MIN_DPT).toBe(CONFIG_MIN_DPT);

@@ -93,7 +93,10 @@ def main() -> None:
         "the run ends when the model stops learning rather than when the clock does.",
     )
     parser.add_argument(
-        "--batch", type=int, default=4, help="Not yet sized for the M2; see #128."
+        "--batch",
+        type=int,
+        default=4,
+        help="Not yet sized for the M2; see rails49/occupancy#128.",
     )
     parser.add_argument(
         "--device",

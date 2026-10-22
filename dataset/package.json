@@ -10,8 +10,8 @@
     "online-diagnostics": "tsx src/online_diagnostics.ts"
   },
   "dependencies": {
-    "@occupancy/classifier": "workspace:*",
-    "@occupancy/config": "workspace:*",
+    "@detector/classifier": "workspace:*",
+    "@detector/config": "workspace:*",
     "@rails49/detector": "workspace:*",
     "@rails49/r49": "catalog:",
     "js-yaml": "^4.1.1",

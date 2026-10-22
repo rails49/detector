@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { convexIntersectionArea, polygonArea, polygonIoU } from '../src/overlap.ts';
 
 // Moved down from occupancy's `ui/tests/diagnostics.test.ts` with the arithmetic itself
-// (#107), when the decode became a second consumer.
+// (rails49/occupancy#107), when the decode became a second consumer.
 
 const square = [
   { x: 0, y: 0 },

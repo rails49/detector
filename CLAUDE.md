@@ -30,7 +30,7 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
   (for example `detector.input: [960, 544]` against ADR 0014), the gap is the
   planned migration; leave it unless the task is that migration.
 - The `.r49` format is `@rails49/r49`'s, pinned once in `pnpm-workspace.yaml`.
-  A format change is a release in `rails49/r49`, then a bump here (ADR 0018).
+  A format change is a release in `rails49/r49`, then a bump here (org [ADR-0022](https://github.com/rails49/.github/blob/main/docs/adr/0022-the-r49-format-is-r49s-and-each-consumer-pins-it.md)).
 - `config.json` and `lib/config/src/` are generated. Edit `config.yaml` and run
   `pnpm config:generate`. `detector.classes` is append-only (ADR 0009).
 - `dataset/src/data_prep.ts` and `dataset/src/online_diagnostics.ts` stay
@@ -48,7 +48,7 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
   and no substitute for one (ADR 0007).
 - One model is in occupancy's live path, and the classifier is parked
   ([occupancy ADR 0004](https://github.com/rails49/occupancy/blob/main/docs/adr/0004-one-model-in-the-live-path.md)).
-- `@occupancy/classifier` keeps its three entry points, so `onnxruntime-node`
+- `@detector/classifier` keeps its three entry points, so `onnxruntime-node`
   and `sharp` stay out of browser bundles.
 - Import `onnxruntime-web/wasm`, never the package root
   ([occupancy ADR 0006](https://github.com/rails49/occupancy/blob/main/docs/adr/0006-the-onnx-runtime-ships-from-origin.md)).

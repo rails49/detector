@@ -4,7 +4,7 @@
 config.yaml is authored; everything else is generated and verified. The format's
 own constants — the standard gauge, the scale table and the class vocabulary —
 are read from the data file of the pinned @rails49/r49 package instead, because
-they belong to the .r49 format rather than to this project (ADR 0018). This
+they belong to the .r49 format rather than to this project (org ADR-0022). This
 script reads them from there wherever occupancy still needs them, and fails
 when a `detector.classes` entry names a class the vocabulary does not. It emits three outputs:
 
@@ -136,8 +136,8 @@ def render_generated_ts(config: dict, r49: dict) -> str:
     # root rather than hardcoding one. None leaves it with no class to write at
     # all; a second makes "the root" — the thing every class must be rooted at —
     # ambiguous. Failing here is what keeps both a config error with a message
-    # rather than a runtime one in the browser: occupancy's `ui/src/vocabulary.ts` enforces
-    # the same rule and can only throw.
+    # rather than a runtime one in the browser: occupancy's UI enforces the same
+    # rule and can only throw.
     roots = [name for name, node in vocabulary.items() if isinstance(node, dict)]
     if len(roots) != 1:
         fail(
@@ -225,7 +225,7 @@ def render_generated_ts(config: dict, r49: dict) -> str:
             "",
             "The exported graph does not deduplicate: `end2end`'s `TopK` selects the",
             "300 top-scoring slots and suppresses nothing, so up to four boxes land",
-            "on one vehicle (issue #107). The decode applies this after thresholding.",
+            "on one vehicle (rails49/occupancy#107). The decode applies this after thresholding.",
         ),
         f"export const DETECTOR_NMS_IOU = {ts_literal(nms_iou)};",
         "",
@@ -271,7 +271,7 @@ def render_index_ts() -> str:
     return "\n".join(
         [
             BANNER,
-            "// Public interface of @occupancy/config.",
+            "// Public interface of @detector/config.",
             "//",
             "// This file is the package's interface — the only surface consumers may",
             "// rely on. Per-symbol documentation lives on the declarations in",
@@ -364,7 +364,7 @@ def main() -> None:
         if key in (config.get(section) or {}):
             fail(
                 f"config.yaml still carries '{section}.{key}'. It is the .r49 "
-                f"format's and comes from {R49_DATA} (ADR 0018)."
+                f"format's and comes from {R49_DATA} (org ADR-0022)."
             )
 
     try:

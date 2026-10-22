@@ -5,7 +5,7 @@ import { DETECTOR_MODEL_FILE } from '../src/index.ts';
 
 // The model is a file, not a module, so the package names it twice: once as
 // the `./model` entry a build resolves to copy it, once as the constant a
-// browser fetches it by. These tests are what keeps the two one name (ADR 0019).
+// browser fetches it by. These tests are what keeps the two one name (occupancy ADR 0019).
 
 const packageRoot = path.resolve(__dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
