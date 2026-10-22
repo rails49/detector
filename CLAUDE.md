@@ -41,11 +41,11 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
   Occupancy's UI resolves the entry and imports the constant.
 - `@rails49/detector` is published from a tag, and which version may carry a
   model is set in `README.md` § Releasing.
-- Try a change in occupancy with occupancy's `bin/with-detector.sh`, not
-  `pnpm link`: a link loads detector's own `onnxruntime-web`, a second copy
-  beside the UI's.
 - `lib/detector/src/generated.ts` is generated too (`docs/SYSTEM.md` §
   Configuration).
+- Try a change in occupancy with occupancy's `bin/with-detector.sh`
+  (`README.md`), not `pnpm link`: a link loads detector's own
+  `onnxruntime-web`, a second copy beside the UI's.
 - There is no model release yet: the current model is trained on the 46
   fixture images and nothing measures it. There is no automated model gate,
   and no substitute for one (ADR 0007).
