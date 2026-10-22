@@ -56,17 +56,17 @@ Requirements:
 
 The canvas size is not set yet. The `end2end` head's anchor floor bounds it from below (`H·W ≥ ~14,629` px, measured). Training memory bounds it from above; [rails49/occupancy#128](https://github.com/rails49/occupancy/issues/128) measured that ceiling on the M2.
 
-### The minimum DPT is 20
+### Minimum DPT
 
 Below DPT 20 a car is too few pixels across for the detector to place it reliably. The minimum DPT is this detector's [reader requirement](https://github.com/rails49/r49/blob/main/FORMAT.md#reader-requirements), authored as `layout.min_dpt` and exported as `MIN_DPT`. It is set separately from the format's recommended DPT. Occupancy's editor warns below it and never blocks ([occupancy SPEC § Calibration](https://github.com/rails49/occupancy/blob/main/SPEC.md#establishes-the-relation-between-image-pixels-and-physical-dimensions)).
 
 ### Car width is derived from DPT, never stored
 
-Every car has one width in pixels: `DPT × standard_width / standard_gauge` (`carWidthPx`). The scale ratio cancels, so a car is 2.09 track-widths wide in every scale. `standard_width` is the widest real stock, 3000 mm (SBB RAm TEE I), not a typical car: an over-wide box biases toward `occupied`, the direction occupancy's output errs in ([occupancy ADR 0005](https://github.com/rails49/occupancy/blob/main/docs/adr/0005-l1-is-geometry-over-l0-biased-toward-occupied.md)). The label exporter builds training boxes at this width, and occupancy's L1 substitutes it for the width the model predicts.
+A car's width in pixels is `DPT × standard_width / standard_gauge` (`carWidthPx`). The scale ratio cancels, so a car is 2.09 track-widths wide in every scale. `standard_width` is the widest real stock, 3000 mm (SBB RAm TEE I), not a typical car: an over-wide box biases toward `occupied`, the direction occupancy's output errs in ([occupancy ADR 0005](https://github.com/rails49/occupancy/blob/main/docs/adr/0005-l1-is-geometry-over-l0-biased-toward-occupied.md)). The label exporter builds training boxes at this width, and occupancy's L1 substitutes it for the width the model predicts.
 
 ### The runtime reports detections in the caller's frame
 
-`detect` returns one detection per box the model scores above the confidence threshold (`CONFIDENCE_THRESHOLD`, unless the call passes `minConfidence`), after dropping boxes that overlap a higher-scoring one. Each detection has:
+`detect` returns one detection per box the model scores above the confidence threshold (`CONFIDENCE_THRESHOLD`, unless the call passes `minConfidence`), after dropping each box whose IoU with a higher-scoring one exceeds `detector.nms_iou`. That list is L0: every car the model found, one detection each. Each detection has:
 
 * `centre`, `length` and `width`, in pixels of the frame the caller passes;
 * `angle`, the long axis's orientation in radians from the +x axis;
