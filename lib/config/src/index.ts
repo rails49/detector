@@ -6,7 +6,7 @@
 // Hand edits are lost on the next run, and bin/test.sh fails the build when
 // this file disagrees with its sources.
 
-// Public interface of @occupancy/config.
+// Public interface of @detector/config.
 //
 // This file is the package's interface — the only surface consumers may
 // rely on. Per-symbol documentation lives on the declarations in

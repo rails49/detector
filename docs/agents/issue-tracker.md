@@ -11,6 +11,8 @@ Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all op
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
 
+Issues from before the split from rails49/occupancy are occupancy's: write them `rails49/occupancy#N`. A bare `#N` is this repo's. Occupancy #115, #125 and #172 moved here as #3, #2 and #10, and #132's open half is #7. ADRs and research notes keep their old link text (org ADR-0021 rule 3); follow the link.
+
 Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
 
 ## Pull requests as a triage surface

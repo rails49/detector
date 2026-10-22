@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 # No model is downloaded and no accuracy is asserted. The marker-driven
 # regression test and its 99.5% gate were retired with the v4 conversion
-# (SPEC.md § Accuracy, issue #8): they iterated point markers v4 deletes, and
+# (SPEC.md § Accuracy, rails49/occupancy#8): they iterated point markers v4 deletes, and
 # guarded an artifact the live path no longer loads with a number that was
 # never a generalization estimate. Between here and the first detector there is
 # no automated check that a model rebuild matches the published one — a known,
@@ -67,7 +67,7 @@ for project in classifier/resnet detector; do
   (cd "$project" && uv sync --quiet && uv run ruff check . && uv run black --check . && uv run pyright)
   # Only detector has tests, and only for one thing: the letterbox it writes a
   # second copy of because the browser needs the same arithmetic in TypeScript
-  # (issue #100). Guarded by the directory rather than by project name so a
+  # (rails49/occupancy#100). Guarded by the directory rather than by project name so a
   # tests/ tree added to the other one is picked up without editing this.
   if [ -d "$project/tests" ]; then
     (cd "$project" && uv run pytest -q)

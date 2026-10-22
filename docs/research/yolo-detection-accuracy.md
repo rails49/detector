@@ -1,6 +1,6 @@
 # YOLO detection accuracy for track occupancy
 
-Written 2026-08-05. Research note on [issue #115](https://github.com/rails49/occupancy/issues/115): is sufficient detection
+Written 2026-08-05. Research note on [rails49/detector#3](https://github.com/rails49/detector/issues/3): is sufficient detection
 accuracy of railroad cars achievable with a detector to virtually avoid crashes — miss rate < 0.1%,
 false positives < 1%, areas of 2×1 m or more, overhead camera, model trained on the layout it runs
 on? **The current stack (YOLO26n-OBB, ONNX INT8, browser WASM) is treated as one option, not a
@@ -186,7 +186,7 @@ points do not translate 1:1. But capacity buys exactly what this task's bar is m
 the top of the ranking is incompatible with the current architecture — fp32 large models and
 ensembles do not fit a 25 MiB in-browser bundle, so options 1–2 imply inference off-device, which
 `ui/CLAUDE.md` says not to reintroduce "without discussion". That is a consequence to weigh
-explicitly, not a reason to rank differently: **if the accuracy bar of issue rails49/occupancy#115 binds, the
+explicitly, not a reason to rank differently: **if the accuracy bar of issue rails49/detector#3 binds, the
 deployment architecture is what should bend, and this ranking is the menu for that discussion.**
 
 **Recommendation: take option 3 immediately (l or x variant, fp32 until measurement says

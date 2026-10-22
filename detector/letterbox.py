@@ -6,7 +6,7 @@ this is the one piece of the export path that has to agree with code in another
 language, and it should be testable without loading torch or a model.
 
 **This duplicates the TypeScript.** Deliberately — see the resolution on issue
-#100. The alternatives were emitting it from `config.yaml` (which is for
+rails49/occupancy#100. The alternatives were emitting it from `config.yaml` (which is for
 authored *values*, not functions) or having the quantizer shell out to node.
 Both cost more than nine lines of arithmetic do. What keeps the two together is
 `tests/test_letterbox.py` and `lib/detector/tests/decode.test.ts` asserting the

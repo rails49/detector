@@ -7,7 +7,7 @@ consumer here; occupancy's UI depends on `detector`.
 * `classifier` : ONNX Runtime image classifier (browser and node targets)
 * `detector` : car boxes — the YOLO OBB session (browser), the L0 decode, and
   the span→box construction the exporter uses. L1 is in occupancy's UI
-  (`ui/src/occupancy.ts`, [ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md))
+  (`ui/src/occupancy.ts`, [occupancy ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md))
 * `config` : **generated** from `config.yaml` — layout and detector constants
 
 ## `config` is generated, and committed
@@ -78,7 +78,7 @@ Three rules:
 
   `./model` is not a module: it resolves to the `.ort` file, which
   occupancy's UI build copies into the bundle when it exists
-  ([ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md)).
+  ([occupancy ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md)).
   An `exports` target may not leave the package, so the build copies
   `detector/models/<name>`, where the exporter writes, into `dist/` when it
   exists. A package packed without it has no `./model` entry.

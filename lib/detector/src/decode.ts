@@ -102,7 +102,7 @@ export function decodeDetections(
  * Drop every box that is a second opinion about a car already accounted for.
  *
  * **The graph does not do this, contrary to what the export long assumed**
- * (issue #107). `end2end`'s `TopK` selects the 300 highest-scoring slots and
+ * (rails49/occupancy#107). `end2end`'s `TopK` selects the 300 highest-scoring slots and
  * suppresses nothing, so the head routinely emits two, three or four boxes on
  * one vehicle. Measured across the fixture corpus: 130 boxes over 87 distinct
  * vehicles at fp32, 139 over 89 at INT8 — quantization is not the cause, the

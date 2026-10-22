@@ -3,7 +3,7 @@
 Written 2026-08-05. Research note on [issue #127](https://github.com/iot49/rails49/issues/127): the DPT-normalized
 design resamples every image to a constant DPT, pads up to a multiple of 32, and lets input size
 fall out of layout extent × DPT — so it differs per layout. The network itself doesn't care
-(fully convolutional, strides 8/16/32 — established in rails49/occupancy#115's groundwork); this note answers what
+(fully convolutional, strides 8/16/32 — established in rails49/detector#3's groundwork); this note answers what
 the **framework and export chain** support: `imgsz`/`rect`/mosaic at rectangular sizes for OBB,
 val/predict at native sizes, `dynamic=True` export through the ONNX → INT8 → `.ort` chain, and
 the documented fixed-scene guidance.
@@ -389,7 +389,7 @@ rectangular or dynamic pipeline feels the head least expectedly.
   measurement here is the native CPU EP via Python. No test environment in this repo can execute
   a real WASM inference (rails49/occupancy#109 removed the tooling; rails49/occupancy#114 records the gap), so first-inference
   latency at a new shape, memory-arena growth at 1088×1920-class inputs, and thread behavior
-  remain unmeasured. The rails49/occupancy#115 groundwork already names memory as "the one number here that
+  remain unmeasured. The rails49/detector#3 groundwork already names memory as "the one number here that
   should be measured rather than reasoned about" — that stands, now specifically for the WASM
   arena under the largest per-layout shape.
 - **Any documented Ultralytics statement on end2end heads at non-square sizes.** The docs are
@@ -436,4 +436,4 @@ reproducible from the descriptions in §4–§5; none are checked in.
 
 **This repo:** `detector/train.py`, `detector/export_onnx.py`, `lib/detector/src/letterbox.ts`,
 `lib/detector/src/decode.ts`, `docs/research/yolo-detection-accuracy.md`, issues rails49/occupancy#100, rails49/occupancy#107,
-rails49/occupancy#109, rails49/occupancy#112, rails49/occupancy#113, rails49/occupancy#114, rails49/occupancy#115.
+rails49/occupancy#109, rails49/occupancy#112, rails49/occupancy#113, rails49/occupancy#114, rails49/detector#3.

@@ -70,13 +70,13 @@ built to `dist/` and published from a tag (`README.md` § Releasing); the other
 `lib/*` packages are consumed as TypeScript source and not published.
 `lib/CLAUDE.md` holds their interface rules. The `.r49` format package,
 `@rails49/r49`, comes from npm at the version `pnpm-workspace.yaml` pins
-(ADR 0018).
+(org [ADR-0022](https://github.com/rails49/.github/blob/main/docs/adr/0022-the-r49-format-is-r49s-and-each-consumer-pins-it.md)).
 
 | Package | Described in |
 | :--- | :--- |
-| `@occupancy/config` | `lib/config/src/index.ts` (generated) |
+| `@detector/config` | `lib/config/src/index.ts` (generated) |
 | `@rails49/detector` | `lib/detector/src/index.ts` |
-| `@occupancy/classifier` | `lib/classifier/README.md` |
+| `@detector/classifier` | `lib/classifier/README.md` |
 
 ## Model files
 

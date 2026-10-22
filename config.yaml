@@ -33,8 +33,8 @@ cnn:
 # Layout & Physical specifications (R49 manifest)
 # ====================================================================================
 # The standard gauge and the scale-to-ratio table are the .r49 format's, not this
-# project's: the generator reads them from @rails49/r49's data file (ADR 0018,
-# #181). The generator fails if either reappears here.
+# project's: the generator reads them from @rails49/r49's data file (org ADR-0022,
+# rails49/occupancy#181). The generator fails if either reappears here.
 layout:
   # Prototype mm — widest real stock (SBB RAm TEE I). Car width is derived from
   # this rather than stored per label; because width in pixels is
@@ -59,7 +59,7 @@ detector:
   # cars and every sensor reads `occupied` on every frame.
   confidence_threshold: 0.25
   # Rotated-box IoU above which two detections are taken to be the same car,
-  # and the lower-scoring one dropped (issue #107).
+  # and the lower-scoring one dropped (rails49/occupancy#107).
   #
   # The exported graph does **not** deduplicate. `end2end`'s `TopK` selects the
   # 300 highest-scoring slots; it suppresses nothing, and measurement across the
@@ -96,7 +96,7 @@ detector:
   classes: ["stock"]
   #
   # Every entry must name a class in the vocabulary — the authoring taxonomy,
-  # which is the .r49 format's and lives in @rails49/r49's data file (ADR 0018). The
+  # which is the .r49 format's and lives in @rails49/r49's data file (org ADR-0022). The
   # generator fails, naming the class, when one does not: a class no label can
   # carry is an index nothing is ever trained as.
   #

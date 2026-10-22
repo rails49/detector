@@ -23,10 +23,10 @@ importers:
 
   dataset:
     dependencies:
-      '@occupancy/classifier':
+      '@detector/classifier':
         specifier: workspace:*
         version: link:../lib/classifier
-      '@occupancy/config':
+      '@detector/config':
         specifier: workspace:*
         version: link:../lib/config
       '@rails49/detector':

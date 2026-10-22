@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import sharp from 'sharp';
-import { DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@occupancy/config';
+import { DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@detector/config';
 import { R49Archive } from '@rails49/r49';
 import { planArchive, type ImageDecoder, type Split } from './yolo_rules.ts';
 

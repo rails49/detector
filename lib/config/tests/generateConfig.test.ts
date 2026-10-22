@@ -7,7 +7,7 @@ import authoredData from '@rails49/r49/data.json';
 
 // The vocabulary and the class list are authored in two places now: the
 // vocabulary is the .r49 format's (`@rails49/r49`'s data file) and
-// `detector.classes` is this project's (`config.yaml`), ADR 0018 / #181.
+// `detector.classes` is this project's (`config.yaml`), org ADR-0022 / rails49/occupancy#181.
 // Removing a subtype from the one used to sit beside the class list it broke;
 // now nothing but the generator sees both, so it is what refuses the pair — and `bin/test.sh` runs
 // it first, so a refusal fails the whole gate.

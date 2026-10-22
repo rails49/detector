@@ -1,4 +1,4 @@
-// PARKED — the marker-driven crop derivation is gone, not ported. See #18.
+// PARKED — the marker-driven crop derivation is gone, not ported. See rails49/occupancy#18.
 //
 // This script used to walk every point marker in every archive and cut one
 // 144x144 crop per marker, tagged by the marker's type. v4 stores no point
@@ -9,7 +9,7 @@
 // vocabulary does not shrink from three tags to two, it collapses to one,
 // degenerate, with no negatives at all. This is why `classifier.labels` was
 // deleted from config.yaml rather than corrected. See SPEC.md § v4 cannot
-// produce a trainable CNN dataset (issue #8).
+// produce a trainable CNN dataset (rails49/occupancy#8).
 //
 // The route back is documented and is an experiment, not a schema question:
 // sample background crops as *verified* negatives, which `labeled_complete`
@@ -27,7 +27,7 @@ console.error(
     '',
     'Every crop derivable from a car span earns the same tag, so the crop',
     'vocabulary collapses to one degenerate class with no negatives. See',
-    'SPEC.md § "v4 cannot produce a trainable CNN dataset" (issue #8) and the',
+    'SPEC.md § "v4 cannot produce a trainable CNN dataset" (rails49/occupancy#8) and the',
     'comment at the top of dataset/src/data_prep.ts.',
     '',
     'The route back is sampling background crops as verified negatives — an',
