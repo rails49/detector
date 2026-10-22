@@ -12,9 +12,9 @@ cd "$(dirname "$0")/.."
 # no automated check that a model rebuild matches the published one — a known,
 # accepted gap, not one to plug with a substitute gate.
 
-# lib/config is generated from config.yaml and committed, so a fresh clone
-# typechecks before anyone runs a generator. Regenerate into a temp tree and
-# diff: editing config.yaml without regenerating fails here rather than
+# lib/config and lib/detector/src/generated.ts are generated from config.yaml
+# and committed, so a fresh clone typechecks before anyone runs a generator.
+# Regenerate into a temp tree and diff: editing config.yaml without regenerating fails here rather than
 # surfacing at runtime. config.json is gitignored and not compared.
 #
 # This gate is NOT skippable. The Python *checks* below degrade to a warning
@@ -22,7 +22,7 @@ cd "$(dirname "$0")/.."
 # does not touch. This is different: it is the only thing standing between a
 # config.yaml edit and a silent runtime disagreement, so a missing uv is a
 # hard failure rather than a quiet pass. uv is required to regenerate anyway.
-echo "🔍 Checking lib/config is up to date with config.yaml..."
+echo "🔍 Checking the generated config is up to date with config.yaml..."
 if ! command -v uv &>/dev/null; then
   echo "❌ uv is required to verify lib/config against config.yaml, and was not found."
   echo "   Install uv (https://github.com/astral-sh/uv), then re-run."
@@ -37,14 +37,19 @@ if ! uv run --quiet --with pyyaml python3 bin/generate_config.py --out-dir "$STA
   echo "❌ Could not regenerate config to verify it. See the error above."
   exit 1
 fi
-if ! diff -r -q lib/config/src "$STALE_DIR/lib/config/src"; then
+if ! diff -r -q lib/config/src "$STALE_DIR/lib/config/src" \
+  || ! diff -q lib/detector/src/generated.ts "$STALE_DIR/lib/detector/src/generated.ts"; then
   echo ""
-  echo "❌ lib/config is stale — config.yaml has changed since it was generated."
+  echo "❌ The generated config is stale — config.yaml has changed since it was generated."
   echo "   Run: pnpm config:generate"
-  echo "   Then commit the result. lib/config is generated but committed."
+  echo "   Then commit the result. It is generated but committed."
   exit 1
 fi
-echo "✅ lib/config matches config.yaml."
+echo "✅ The generated config matches config.yaml."
+
+# @rails49/detector's consumers, dataset/ among them, read its built dist/.
+echo "📦 Building the packages..."
+pnpm -r build
 
 # Run TypeScript typechecks
 echo "🔍 Running TypeScript typecheck..."
@@ -68,5 +73,11 @@ for project in classifier/resnet detector; do
     (cd "$project" && uv run pytest -q)
   fi
 done
+
+# The package as it ships, packed and installed alone.
+echo "📦 Checking @rails49/detector as packed..."
+PACKAGE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/package.XXXXXX")
+trap 'rm -rf "$STALE_DIR" "$PACKAGE_DIR"' EXIT
+bin/check-package.sh "$PACKAGE_DIR"
 
 echo "🎉 All checks passed successfully!"

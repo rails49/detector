@@ -10,8 +10,8 @@ deploy are in occupancy.
 trains where there are none. It is not a safety interlock. Responsibility for
 safe operation rests with the user.
 
-`lib/detector` is `@occupancy/detector`, the package occupancy's UI depends on.
-Publishing it, as `@rails49/detector`, is not set up yet
+`lib/detector` is [`@rails49/detector`](https://www.npmjs.com/package/@rails49/detector)
+on npm, the package occupancy's UI depends on
 ([occupancy ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md)).
 No model has been released.
 
@@ -28,12 +28,36 @@ noted.
 | Install the hooks: pre-commit refuses commits on `main`, pre-push runs `bin/test.sh` | `bin/install-hooks.sh` |
 | Typecheck all packages | `pnpm typecheck` |
 | All TS tests | `pnpm test` |
-| Tests for one package | `pnpm --filter @occupancy/detector test` |
+| Tests for one package | `pnpm --filter @rails49/detector test` |
 | Regenerate `config.json` and `lib/config` | `pnpm config:generate` |
 | Python lint, format, types | `cd <classifier/resnet\|detector> && uv run ruff check . && uv run black --check . && uv run pyright` |
 | Derive the detector dataset | `pnpm --filter dataset run export:yolo` (reads `dataset/r49/`, writes `dataset/yolo/`; see [dataset/README.md](dataset/README.md)) |
 | Fine-tune and export the detector | `cd detector && uv run python train.py --epochs 20 && uv run python export_onnx.py` (see [detector/README.md](detector/README.md)) |
 | Train the classifier (parked: no corpus) | run [classifier/resnet/TRAIN.ipynb](classifier/resnet/TRAIN.ipynb) (see [classifier/resnet/README.md](classifier/resnet/README.md)) |
+
+## Releasing
+
+A tag `vX.Y.Z` on `main` publishes `@rails49/detector` `X.Y.Z` to npm through
+trusted publishing, then makes a GitHub Release with generated notes.
+
+1. In a pull request, set the version in `lib/detector/package.json`.
+2. Merge it.
+3. Tag the merge commit on `main` and push the tag:
+
+   ```sh
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+The [release workflow](.github/workflows/release.yml) publishes nothing for a
+tag that is not `vX.Y.Z`, not on `main`, or not the package's version. It
+publishes the tarball `bin/check-package.sh` checked. npm does not accept a
+version twice; a failed publish is fixed by re-running its job.
+
+CI holds no model, so a release carries the runtime alone. Releases without a
+model are `0.0.x`. The first release with a model is `0.1.0`, and it waits for
+a model measured on held-out images: nothing automated decides that a model is
+good enough (ADR 0007).
 
 ## Contributing
 

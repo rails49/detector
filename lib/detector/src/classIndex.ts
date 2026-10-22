@@ -1,4 +1,4 @@
-import { DETECTOR_CLASSES } from '@occupancy/config';
+import { DETECTOR_CLASSES } from './generated.ts';
 import { isSegmentPrefix } from '@rails49/r49';
 
 /** The YOLO class list. A separate name so the default is legible. */

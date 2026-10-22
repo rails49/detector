@@ -1,18 +1,37 @@
 {
-  "name": "@occupancy/detector",
-  "version": "0.1.0",
+  "name": "@rails49/detector",
+  "version": "0.0.1",
+  "description": "The rails49 occupancy detector: its browser runtime, car geometry and, once one is measured, the model",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rails49/detector.git",
+    "directory": "lib/detector"
+  },
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./browser": "./src/browser.ts",
-    "./model": "./models/detector_int8.ort"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./model": "./dist/detector_int8.ort"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/copy-model.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@occupancy/config": "workspace:*",
     "@rails49/r49": "catalog:",
     "onnxruntime-common": "^1.26.0"
   },

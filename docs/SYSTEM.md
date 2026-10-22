@@ -54,9 +54,10 @@ reads both and writes:
 | Output | Tracked? | Read by |
 | :--- | :--- | :--- |
 | `config.json` | gitignored | the model export |
-| `lib/config/src/` | committed | TypeScript in this repository |
+| `lib/config/src/` | committed | `dataset` |
+| `lib/detector/src/generated.ts` | committed | `@rails49/detector`, which is published and so imports no workspace package |
 
-`bin/test.sh` regenerates `lib/config` into a temporary tree and fails on a
+`bin/test.sh` regenerates both into a temporary tree and fails on a
 difference. The generator fails, naming the class, when a `detector.classes`
 entry is not in the vocabulary (`lib/config/tests/generateConfig.test.ts`), and
 fails if `classifier.labels` reappears (rails49/occupancy#8). Python reads
@@ -64,8 +65,9 @@ fails if `classifier.labels` reappears (rails49/occupancy#8). Python reads
 
 ## Workspace packages
 
-`pnpm-workspace.yaml` covers `lib/*` and `dataset`. The `lib/*` packages are
-consumed as TypeScript source; nothing under `lib/` is built or published yet.
+`pnpm-workspace.yaml` covers `lib/*` and `dataset`. `@rails49/detector` is
+built to `dist/` and published from a tag (`README.md` § Releasing); the other
+`lib/*` packages are consumed as TypeScript source and not published.
 `lib/CLAUDE.md` holds their interface rules. The `.r49` format package,
 `@rails49/r49`, comes from npm at the version `pnpm-workspace.yaml` pins
 (ADR 0018).
@@ -73,7 +75,7 @@ consumed as TypeScript source; nothing under `lib/` is built or published yet.
 | Package | Described in |
 | :--- | :--- |
 | `@occupancy/config` | `lib/config/src/index.ts` (generated) |
-| `@occupancy/detector` | `lib/detector/src/index.ts` |
+| `@rails49/detector` | `lib/detector/src/index.ts` |
 | `@occupancy/classifier` | `lib/classifier/README.md` |
 
 ## Model files
@@ -83,7 +85,8 @@ package version names the model, and no model has been released. The
 classifier's `classifier/resnet/models/version.txt` is tracked.
 `bin/test.sh` downloads no model.
 
-The detector package exposes `detector/models/detector_int8.ort` as its
-`./model` exports entry, through the `lib/detector/models` link
+The detector package's build copies `detector/models/detector_int8.ort` into
+`dist/`, which its `./model` exports entry names
 ([occupancy ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md)).
-The link dangles in a clone with no model.
+With no model the build copies nothing, and the packed package has no
+`./model` entry.

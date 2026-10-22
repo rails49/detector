@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { DETECTOR_CONFIDENCE_THRESHOLD, MIN_DPT as CONFIG_MIN_DPT } from '@occupancy/config';
+import { DETECTOR_CONFIDENCE_THRESHOLD, MIN_DPT as CONFIG_MIN_DPT } from '../src/generated.ts';
 
 // Any ONNX Runtime module the root entry point reached would run one of these
 // factories. The editor imports `MIN_DPT` from here, and it must not pay for

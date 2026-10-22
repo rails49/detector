@@ -1,4 +1,4 @@
-// Public interface of @occupancy/detector (root entry point).
+// Public interface of @rails49/detector (root entry point).
 //
 // This file is the package's interface — the only surface consumers may rely
 // on. Anything not exported here is internal and may change without notice.
@@ -17,7 +17,7 @@
 // and the label exporter both need it. The session itself is behind a
 // platform entry point, so nothing that only wants the geometry pays for ORT:
 //
-//   import { loadDetector } from '@occupancy/detector/browser';
+//   import { loadDetector } from '@rails49/detector/browser';
 
 //── L0: what the model saw ───────────────────────────────────────────────────
 // One detection per car, in the frame the caller asked `detect` to answer in —

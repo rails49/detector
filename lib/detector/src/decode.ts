@@ -1,4 +1,4 @@
-import { DETECTOR_CLASSES, DETECTOR_NMS_IOU } from '@occupancy/config';
+import { DETECTOR_CLASSES, DETECTOR_NMS_IOU } from './generated.ts';
 import { mapPoint, mapVector, type GridToReport } from './letterbox.ts';
 import { boxCorners } from './geometry.ts';
 import { polygonIoU } from './overlap.ts';
