@@ -29,7 +29,7 @@ importers:
       '@occupancy/config':
         specifier: workspace:*
         version: link:../lib/config
-      '@occupancy/detector':
+      '@rails49/detector':
         specifier: workspace:*
         version: link:../lib/detector
       '@rails49/r49':
@@ -103,9 +103,6 @@ importers:
 
   lib/detector:
     dependencies:
-      '@occupancy/config':
-        specifier: workspace:*
-        version: link:../config
       '@rails49/r49':
         specifier: 'catalog:'
         version: 0.1.0

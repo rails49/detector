@@ -1,4 +1,4 @@
-import { DETECTOR_CONFIDENCE_THRESHOLD, MIN_DPT as LAYOUT_MIN_DPT } from '@occupancy/config';
+import { DETECTOR_CONFIDENCE_THRESHOLD, MIN_DPT as LAYOUT_MIN_DPT } from './generated.ts';
 
 /**
  * The DPT below which a car is too few pixels across for this detector to

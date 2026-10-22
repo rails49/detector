@@ -37,7 +37,8 @@ if ! uv run --quiet --with pyyaml python3 bin/generate_config.py --out-dir "$STA
   echo "❌ Could not regenerate config to verify it. See the error above."
   exit 1
 fi
-if ! diff -r -q lib/config/src "$STALE_DIR/lib/config/src"; then
+if ! diff -r -q lib/config/src "$STALE_DIR/lib/config/src" \
+  || ! diff -q lib/detector/src/generated.ts "$STALE_DIR/lib/detector/src/generated.ts"; then
   echo ""
   echo "❌ lib/config is stale — config.yaml has changed since it was generated."
   echo "   Run: pnpm config:generate"
@@ -45,6 +46,10 @@ if ! diff -r -q lib/config/src "$STALE_DIR/lib/config/src"; then
   exit 1
 fi
 echo "✅ lib/config matches config.yaml."
+
+# @rails49/detector's consumers, dataset/ among them, read its built dist/.
+echo "📦 Building the packages..."
+pnpm -r build
 
 # Run TypeScript typechecks
 echo "🔍 Running TypeScript typecheck..."
@@ -68,5 +73,11 @@ for project in classifier/resnet detector; do
     (cd "$project" && uv run pytest -q)
   fi
 done
+
+# The package as it ships, packed and installed alone (ADR 0019).
+echo "📦 Checking @rails49/detector as packed..."
+PACKAGE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/package.XXXXXX")
+trap 'rm -rf "$STALE_DIR" "$PACKAGE_DIR"' EXIT
+bin/check-package.sh "$PACKAGE_DIR"
 
 echo "🎉 All checks passed successfully!"

@@ -1,0 +1,98 @@
+# A pushed tag vX.Y.Z publishes @rails49/detector to npm through trusted
+# publishing, then makes a GitHub Release. The steps a person takes are in
+# README.md § Releasing.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+
+jobs:
+  # Builds and checks the package once, and hands that same tarball to the
+  # publish job.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Full history: the check that the tag is on main needs main present.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag
+        run: |
+          if ! [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "$GITHUB_REF_NAME is not vX.Y.Z; nothing is published" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "$GITHUB_REF_NAME is not on main; nothing is published" >&2
+            exit 1
+          fi
+          version=$(node -p "require('./lib/detector/package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "$GITHUB_REF_NAME does not match @rails49/detector's version $version; nothing is published" >&2
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # CI holds no model, so this publishes the runtime alone. The first
+      # release with a measured model is 0.1.0 (README.md § Releasing).
+      - name: Build and check the package
+        run: |
+          pnpm install --frozen-lockfile --filter "@rails49/detector..."
+          pnpm --filter @rails49/detector build
+          bin/check-package.sh "$RUNNER_TEMP/package"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: ${{ runner.temp }}/package
+          if-no-files-found: error
+
+  # A failed publish is fixed by re-running this job; the tarball does not change.
+  npm:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@11.21.0
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: package
+          path: ${{ runner.temp }}/package
+
+      - run: npm publish "$RUNNER_TEMP"/package/*.tgz
+
+  github-release:
+    needs: npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes

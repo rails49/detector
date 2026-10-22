@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@occupancy/config';
-import { carWidthPx, detectorClassIndex, spanToPolygon } from '@occupancy/detector';
+import { carWidthPx, detectorClassIndex, spanToPolygon } from '@rails49/detector';
 import { getDPT, type ManifestData } from '@rails49/r49';
 
 /**
@@ -21,7 +21,7 @@ import { getDPT, type ManifestData } from '@rails49/r49';
  * else that could drop a car is fatal instead.
  *
  * The car box itself is **not** here. `carWidthPx` and `spanToPolygon` are
- * `@occupancy/detector`'s, which is the only way the UI's archive diagnostics
+ * `@rails49/detector`'s, which is the only way the UI's archive diagnostics
  * can draw ground truth in the browser — this module imports `node:crypto` at
  * the top for the split — and the only way the width constant that biases
  * boxes toward `occupied` has one home rather than two.

@@ -8,7 +8,6 @@ import { DETECTOR_MODEL_FILE } from '../src/index.ts';
 // browser fetches it by. These tests are what keeps the two one name (ADR 0019).
 
 const packageRoot = path.resolve(__dirname, '..');
-const repoRoot = path.resolve(packageRoot, '../..');
 const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
 
 describe("the detector package's model", () => {
@@ -24,13 +23,10 @@ describe("the detector package's model", () => {
     expect(DETECTOR_MODEL_FILE).toMatch(/_int8\.ort$/);
   });
 
-  it('sits where the exporter writes it', () => {
-    // An `exports` target may not leave the package, and the exporter writes
-    // to `detector/models/`. The entry reaches it through the package's
-    // `models` link, which dangles in a clone with no model.
-    const link = path.dirname(path.join(packageRoot, manifest.exports['./model']));
-    expect(path.resolve(path.dirname(link), fs.readlinkSync(link))).toBe(
-      path.join(repoRoot, 'detector/models'),
-    );
+  it('is a file in dist/, where the build copies the exported model', () => {
+    // An `exports` target may not leave the package. `scripts/copy-model.mjs`
+    // copies `detector/models/<this name>` there when it exists; packing drops
+    // the entry when it does not (`bin/check-package.sh`).
+    expect(path.posix.dirname(manifest.exports['./model'])).toBe('./dist');
   });
 });

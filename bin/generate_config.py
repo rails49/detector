@@ -6,11 +6,14 @@ own constants — the standard gauge, the scale table and the class vocabulary �
 are read from the data file of the pinned @rails49/r49 package instead, because
 they belong to the .r49 format rather than to this project (ADR 0018). This
 script reads them from there wherever occupancy still needs them, and fails
-when a `detector.classes` entry names a class the vocabulary does not. It emits two outputs:
+when a `detector.classes` entry names a class the vocabulary does not. It emits three outputs:
 
   config.json          gitignored, consumed by the model export and the UI
   lib/config/src/      committed, so a fresh clone typechecks before anyone
                        runs a generator
+  lib/detector/src/generated.ts
+                       committed, the same generated.ts, so the published
+                       @rails49/detector depends on no workspace package
 
 Pass --config and --r49-data to read other files than the project's own; the
 tests use that to drive the vocabulary check without editing either.
@@ -288,7 +291,7 @@ def render_index_ts() -> str:
             "",
             "//── Detector ────────────────────────────────────────────────────────────────",
             "// The dataset exporter reads the class list and the split ratio.",
-            "// @occupancy/detector reads all three of the input resolution (checked",
+            "// @rails49/detector reads all three of the input resolution (checked",
             "// against the loaded graph, which cannot disagree with itself), the class",
             "// list (indexed by the tensor's class field) and the confidence threshold",
             "// (applied during decoding — a fixed 300-slot buffer is mostly padding, so",
@@ -387,16 +390,22 @@ def main() -> None:
     out_dir = os.path.abspath(args.out_dir)
     json_path = os.path.join(out_dir, "config.json")
     pkg_src = os.path.join(out_dir, "lib", "config", "src")
+    detector_src = os.path.join(out_dir, "lib", "detector", "src")
 
     try:
         write(json_path, json.dumps(config, indent=2))
-        write(os.path.join(pkg_src, "generated.ts"), render_generated_ts(config, r49))
+        generated = render_generated_ts(config, r49)
+        write(os.path.join(pkg_src, "generated.ts"), generated)
         write(os.path.join(pkg_src, "index.ts"), render_index_ts())
+        # The published @rails49/detector cannot depend on this workspace's
+        # @occupancy/config, so it carries its own copy.
+        write(os.path.join(detector_src, "generated.ts"), generated)
     except OSError as e:
         fail(f"could not write generated output: {e}")
 
     print(f"✅ Generated {json_path}")
     print(f"✅ Generated {pkg_src}/generated.ts and index.ts")
+    print(f"✅ Generated {detector_src}/generated.ts")
 
 
 if __name__ == "__main__":

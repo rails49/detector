@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { carWidthPx } from '@occupancy/detector';
+import { carWidthPx } from '@rails49/detector';
 import { R49Archive, getDPT, type ManifestData } from '@rails49/r49';
 import { planArchive, type ImageDecoder, type ImagePlan } from '../src/yolo_rules.ts';
 
@@ -15,7 +15,7 @@ import { planArchive, type ImageDecoder, type ImagePlan } from '../src/yolo_rule
  * a stated size for any image the archive carries, so no test needs a real
  * JPEG or `sharp`.
  *
- * The car box's own cases are `@occupancy/detector`'s, with `spanToPolygon`.
+ * The car box's own cases are `@rails49/detector`'s, with `spanToPolygon`.
  */
 
 const A_JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);

@@ -26,7 +26,7 @@ export {
 
 //── Detector ────────────────────────────────────────────────────────────────
 // The dataset exporter reads the class list and the split ratio.
-// @occupancy/detector reads all three of the input resolution (checked
+// @rails49/detector reads all three of the input resolution (checked
 // against the loaded graph, which cannot disagree with itself), the class
 // list (indexed by the tensor's class field) and the confidence threshold
 // (applied during decoding — a fixed 300-slot buffer is mostly padding, so

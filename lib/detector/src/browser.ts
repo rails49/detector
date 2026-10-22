@@ -2,7 +2,7 @@
 // (WebGPU/WebNN) binary, which is over Cloudflare's per-file limit and which
 // `executionProviders: ['wasm']` below never uses. See occupancy's `ui/ortAssets.ts`.
 import * as ort from 'onnxruntime-web/wasm';
-import { DETECTOR_INPUT } from '@occupancy/config';
+import { DETECTOR_INPUT } from './generated.ts';
 import { decodeDetections } from './decode.ts';
 import { gridToReport } from './letterbox.ts';
 import { paintLetterbox } from './preprocess.ts';

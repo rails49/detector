@@ -55,7 +55,7 @@ label lines and warnings, or the reasons it is fatal. Nothing in it touches the
 filesystem or `sharp`, and it is where the tests point; `src/yolo_export.ts`
 only walks directories, decodes, writes what it is handed and reports, and
 names every fatal image of an archive before writing any of it. The car box itself is not there: `carWidthPx` and `spanToPolygon`
-are `@occupancy/detector`'s, so that the width constant has one home and occupancy's
+are `@rails49/detector`'s, so that the width constant has one home and occupancy's
 UI can draw ground truth beside detections without importing `node:crypto`.
 
 ### `pnpm run prep` — ⚠️ PARKED (exits non-zero)
@@ -107,6 +107,6 @@ Training reads the corpus from a local checkout of it, passed as `--in`.
 *   `data/`: The generated CNN crop database (gitignored; nothing generates it
     today).
 *   `src/yolo_export.ts`, `src/yolo_rules.ts`: the detector export and its rules
-    (the car box is `@occupancy/detector`'s).
+    (the car box is `@rails49/detector`'s).
 *   `src/data_prep.ts`, `src/online_diagnostics.ts`: parked stubs carrying the
     reasoning above.

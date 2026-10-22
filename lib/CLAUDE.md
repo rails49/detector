@@ -79,9 +79,15 @@ Three rules:
   `./model` is not a module: it resolves to the `.ort` file, which
   occupancy's UI build copies into the bundle when it exists
   ([ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md)).
-  An `exports` target may not leave the package, so `models` is a link to
-  `detector/models/`, where the exporter writes. `DETECTOR_MODEL_FILE` on `.`
-  is the same name, for the browser's fetch.
+  An `exports` target may not leave the package, so the build copies
+  `detector/models/<name>`, where the exporter writes, into `dist/` when it
+  exists. A package packed without it has no `./model` entry.
+  `DETECTOR_MODEL_FILE` on `.` is the same name, for the browser's fetch.
+
+* **`detector` is built and published; the others are not.** Its entries
+  point at `dist/`, so `pnpm -r build` runs before anything imports it.
+  It reads its constants from its own `src/generated.ts`, not from
+  `@occupancy/config`.
 
 ## Adding an export
 

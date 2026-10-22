@@ -12,7 +12,7 @@
   "dependencies": {
     "@occupancy/classifier": "workspace:*",
     "@occupancy/config": "workspace:*",
-    "@occupancy/detector": "workspace:*",
+    "@rails49/detector": "workspace:*",
     "@rails49/r49": "catalog:",
     "js-yaml": "^4.1.1",
     "onnxruntime-node": "1.20.0",
