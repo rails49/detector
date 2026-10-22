@@ -41,7 +41,8 @@ layout:
   # DPT * standard_width / standard_gauge, the scale ratio cancels and a car is
   # 2.09 track-widths wide in every scale. Chosen widest rather than typical:
   # an over-wide box biases toward `occupied`, the direction the occupancy
-  # output deliberately errs in. See occupancy's SPEC.md § Location Data.
+  # output deliberately errs in. See SPEC.md § Car width is derived from DPT,
+  # never stored.
   standard_width: 3000.0
   # Below this a car is too few pixels across to localize reliably. Warns
   # persistently, never blocks — the fixture corpus lives at DPT 18-19. Under

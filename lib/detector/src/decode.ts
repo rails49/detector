@@ -109,8 +109,9 @@ export function decodeDetections(
  * premise was simply wrong.
  *
  * It belongs here rather than downstream because L0 is defined as *every car
- * the model found* (occupancy's `SPEC.md` § Occupancy Output), and a list naming one car
- * four times is not that. The same reasoning already puts thresholding here.
+ * the model found* (`SPEC.md` § The runtime reports detections in the caller's
+ * frame), and a list naming one car four times is not that. The same reasoning
+ * already puts thresholding here.
  *
  * Greedy by descending confidence, the standard construction: take the best
  * box, drop everything overlapping it beyond `DETECTOR_NMS_IOU`, repeat.
