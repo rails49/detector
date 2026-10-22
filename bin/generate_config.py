@@ -291,11 +291,7 @@ def render_index_ts() -> str:
             "",
             "//── Detector ────────────────────────────────────────────────────────────────",
             "// The dataset exporter reads the class list and the split ratio.",
-            "// @rails49/detector reads all three of the input resolution (checked",
-            "// against the loaded graph, which cannot disagree with itself), the class",
-            "// list (indexed by the tensor's class field) and the confidence threshold",
-            "// (applied during decoding — a fixed 300-slot buffer is mostly padding, so",
-            "// there is no un-thresholded L0 to hand anyone).",
+            "// @rails49/detector reads its own copy of generated.ts.",
             "export {",
             "  DETECTOR_INPUT,",
             "  DETECTOR_CONFIDENCE_THRESHOLD,",
@@ -397,8 +393,6 @@ def main() -> None:
         generated = render_generated_ts(config, r49)
         write(os.path.join(pkg_src, "generated.ts"), generated)
         write(os.path.join(pkg_src, "index.ts"), render_index_ts())
-        # The published @rails49/detector cannot depend on this workspace's
-        # @occupancy/config, so it carries its own copy.
         write(os.path.join(detector_src, "generated.ts"), generated)
     except OSError as e:
         fail(f"could not write generated output: {e}")

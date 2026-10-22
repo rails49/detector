@@ -47,8 +47,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      # CI holds no model, so this publishes the runtime alone. The first
-      # release with a measured model is 0.1.0 (README.md § Releasing).
+      # CI holds no model, so this publishes the runtime alone.
       - name: Build and check the package
         run: |
           pnpm install --frozen-lockfile --filter "@rails49/detector..."

@@ -13,7 +13,7 @@ safe operation rests with the user.
 `lib/detector` is [`@rails49/detector`](https://www.npmjs.com/package/@rails49/detector)
 on npm, the package occupancy's UI depends on
 ([occupancy ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md)).
-No model has been released: versions `0.0.x` carry the runtime alone.
+No model has been released.
 
 ## Development
 

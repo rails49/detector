@@ -1,8 +1,8 @@
 # Shared Libraries
 
-All written in TypeScript, all consumed as source — nothing here is built or
-published yet. `dataset/` is the only consumer here; occupancy's UI depends on
-`detector`.
+All written in TypeScript. `detector` is built and published as
+`@rails49/detector`; the others are consumed as source. `dataset/` is the only
+consumer here; occupancy's UI depends on `detector`.
 
 * `classifier` : ONNX Runtime image classifier (browser and node targets)
 * `detector` : car boxes — the YOLO OBB session (browser), the L0 decode, and
@@ -84,10 +84,9 @@ Three rules:
   exists. A package packed without it has no `./model` entry.
   `DETECTOR_MODEL_FILE` on `.` is the same name, for the browser's fetch.
 
-* **`detector` is built and published; the others are not.** Its entries
-  point at `dist/`, so `pnpm -r build` runs before anything imports it.
-  It reads its constants from its own `src/generated.ts`, not from
-  `@occupancy/config`.
+* **`detector`'s entries point at `dist/`**, so `pnpm -r build` runs before
+  anything imports it. It reads its constants from its own `src/generated.ts`
+  (`docs/SYSTEM.md` § Configuration).
 
 ## Adding an export
 

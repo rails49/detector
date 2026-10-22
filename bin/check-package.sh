@@ -59,8 +59,8 @@ clean="$work/clean"
 mkdir "$clean"
 echo '{"private": true}' > "$clean/package.json"
 pnpm --dir "$clean" add --config.auto-install-peers=false --prefer-offline "$tarball" >/dev/null
-if [ -e "$clean/node_modules/onnxruntime-web" ] || [ -e "$clean/node_modules/@rails49/detector/node_modules/onnxruntime-web" ]; then
-  echo "❌ onnxruntime-web was installed with the package; the root-entry check would prove nothing" >&2
+if (cd "$clean/node_modules/@rails49/detector" && node -e "require.resolve('onnxruntime-web')" 2>/dev/null); then
+  echo "❌ onnxruntime-web resolves beside the package; the root-entry check would prove nothing" >&2
   exit 1
 fi
 (cd "$clean" && node --input-type=module -e "const d = await import('@rails49/detector'); if (typeof d.carWidthPx !== 'function') process.exit(1);")

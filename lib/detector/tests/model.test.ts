@@ -23,7 +23,7 @@ describe("the detector package's model", () => {
     expect(DETECTOR_MODEL_FILE).toMatch(/_int8\.ort$/);
   });
 
-  it('is a file in dist/, where the build copies the exported model', () => {
+  it('names a file in dist/, where the build copies the exported model', () => {
     // An `exports` target may not leave the package. `scripts/copy-model.mjs`
     // copies `detector/models/<this name>` there when it exists; packing drops
     // the entry when it does not (`bin/check-package.sh`).

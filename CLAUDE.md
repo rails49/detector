@@ -39,11 +39,10 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 - The model filename is written only in `lib/detector`: its `./model` exports
   entry and `DETECTOR_MODEL_FILE` (`lib/detector/tests/model.test.ts`).
   Occupancy's UI resolves the entry and imports the constant.
-- `@rails49/detector` is published from a tag (`README.md` § Releasing).
-  `0.0.x` carries no model; `0.1.0` is the first with a measured one.
-  `bin/check-package.sh` drops the `./model` entry from a package with no model.
-- `lib/detector/src/generated.ts` is the generator's second copy of
-  `generated.ts`, so the published package depends on no workspace package.
+- `@rails49/detector` is published from a tag, and which version may carry a
+  model is set in `README.md` § Releasing.
+- `lib/detector/src/generated.ts` is generated too (`docs/SYSTEM.md` §
+  Configuration).
 - There is no model release yet: the current model is trained on the 46
   fixture images and nothing measures it. There is no automated model gate,
   and no substitute for one (ADR 0007).
