@@ -22,6 +22,25 @@ Quantization must be static INT8. Dynamic quantization emits `ConvInteger`, whic
 
 The training and export pipeline lives in `detector/`.
 
+### Inference cost
+
+Measured in [rails49/occupancy#11](https://github.com/rails49/occupancy/issues/11) against the static-INT8 `.ort` under ORT-web 1.26.0 (WASM EP). Median steady-state `session.run()`, 20 timed passes after 3 warmups:
+
+| Device | Threads | 960×544 | 640×384 |
+| :--- | ---: | ---: | ---: |
+| iPhone (iOS 26.5.2, Safari) | 4 | 120.1 ms | 86.0 ms |
+| iPhone | 1 | 191.3 ms | 103.8 ms |
+| iPad (iOS 26.5.2, Chrome) | 8 | 444.9 ms | 277.9 ms |
+| MacBook i7-7820HQ (Chrome) | 1 | 297.7 ms | 138.5 ms |
+
+* The phone is the fastest device measured. It beats the 2017 laptop by 2.5×.
+* Plan against ~450 ms. The spread across two current iOS devices is 3.7×. The iPad was slowest despite reporting 8 cores, possibly thread oversubscription on big.LITTLE.
+* Time to first result is 1.0–4.5 s. Session creation alone ranged from 32 ms to 3637 ms, and fetching the model took 22–574 ms.
+* Threading gains ~1.2–1.6×. iOS supports it: `crossOriginIsolated` and `SharedArrayBuffer` were confirmed on iPhone and iPad.
+* Region-of-interest or tiled inference saves no time: N tiles cost the same convolution work plus N times the fixed overhead, and cropping to the model's fixed input only upsamples the region. Cropping saves time only by discarding part of the layout.
+
+> These figures measure `session.run()` alone, with no capture and no pre- or post-processing. Input was random; the NMS-free head emits 300 slots whatever the content, so latency does not depend on content. Quote medians, not p95: scheduler and thermal noise dominate the spread on every device.
+
 ### Input geometry is DPT-normalized
 
 Decided in [ADR 0014](docs/adr/0014-dpt-normalized-input-padded-never-resized.md) ([rails49/occupancy#130](https://github.com/rails49/occupancy/issues/130)). Not built: `detector.input: [960, 544]` still ships, and [#10](https://github.com/rails49/detector/issues/10) is open.
@@ -36,6 +55,24 @@ Requirements:
 * The format sees none of this. v4 gains no field, and the editor and live view draw in full-frame image pixels. Normalization and tiling happen between a frame arriving and occupancy being computed, and detections are mapped back into the frame's own coordinates. Two things reach the user, both already present: the `min_dpt` bar at capture, and inference cost growing with tile count.
 
 The canvas size is not set yet. The `end2end` head's anchor floor bounds it from below (`H·W ≥ ~14,629` px, measured). Training memory bounds it from above; [rails49/occupancy#128](https://github.com/rails49/occupancy/issues/128) measured that ceiling on the M2.
+
+### The minimum DPT is 20
+
+Below DPT 20 a car is too few pixels across for the detector to place it reliably. The minimum DPT is this detector's [reader requirement](https://github.com/rails49/r49/blob/main/FORMAT.md#reader-requirements), authored as `layout.min_dpt` and exported as `MIN_DPT`. It is set separately from the format's recommended DPT. Occupancy's editor warns below it and never blocks ([occupancy SPEC § Calibration](https://github.com/rails49/occupancy/blob/main/SPEC.md#establishes-the-relation-between-image-pixels-and-physical-dimensions)).
+
+### Car width is derived from DPT, never stored
+
+Every car has one width in pixels: `DPT × standard_width / standard_gauge` (`carWidthPx`). The scale ratio cancels, so a car is 2.09 track-widths wide in every scale. `standard_width` is the widest real stock, 3000 mm (SBB RAm TEE I), not a typical car: an over-wide box biases toward `occupied`, the direction occupancy's output errs in ([occupancy ADR 0005](https://github.com/rails49/occupancy/blob/main/docs/adr/0005-l1-is-geometry-over-l0-biased-toward-occupied.md)). The label exporter builds training boxes at this width, and occupancy's L1 substitutes it for the width the model predicts.
+
+### The runtime reports detections in the caller's frame
+
+`detect` returns one detection per box the model scores above the confidence threshold (`CONFIDENCE_THRESHOLD`, unless the call passes `minConfidence`), after dropping boxes that overlap a higher-scoring one. Each detection has:
+
+* `centre`, `length` and `width`, in pixels of the frame the caller passes;
+* `angle`, the long axis's orientation in radians from the +x axis;
+* `class`, an entry of `detector.classes`, and `confidence`, in `0…1`.
+
+`length` is the long axis and `width` the short one. `width` is the model's own prediction, not the car width, so a consumer sees what the model said. Which frame to report in is the caller's choice: occupancy reports L0 in `camera.resolution` ([occupancy SPEC § Output encoding](https://github.com/rails49/occupancy/blob/main/SPEC.md#output-encoding)).
 
 ### Licensing: the project is AGPL-3.0
 
