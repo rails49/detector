@@ -33,6 +33,7 @@ noted.
 | Python lint, format, types | `cd <classifier/resnet\|detector> && uv run ruff check . && uv run black --check . && uv run pyright` |
 | Derive the detector dataset | `pnpm --filter dataset run export:yolo` (reads `dataset/r49/`, writes `dataset/yolo/`; see [dataset/README.md](dataset/README.md)) |
 | Fine-tune and export the detector | `cd detector && uv run python train.py --epochs 20 && uv run python export_onnx.py` (see [detector/README.md](detector/README.md)) |
+| Run occupancy's gate, or its UI, against this checkout's package | in a [rails49/occupancy](https://github.com/rails49/occupancy) checkout beside this one, `bin/with-detector.sh` (or `bin/with-detector.sh pnpm --filter @occupancy/ui dev`); it packs `../detector`, with the model if `detector/models/` holds one |
 | Train the classifier (parked: no corpus) | run [classifier/resnet/TRAIN.ipynb](classifier/resnet/TRAIN.ipynb) (see [classifier/resnet/README.md](classifier/resnet/README.md)) |
 
 ## Releasing
@@ -42,7 +43,9 @@ trusted publishing, then makes a GitHub Release with generated notes.
 
 1. In a pull request, set the version in `lib/detector/package.json`.
 2. Merge it.
-3. Tag the merge commit on `main` and push the tag:
+3. With the merge commit checked out, run occupancy's gate against it
+   (`bin/with-detector.sh`, see [Development](#development)).
+4. Tag the merge commit on `main` and push the tag:
 
    ```sh
    git tag vX.Y.Z
