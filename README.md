@@ -40,9 +40,12 @@ noted.
 A tag `vX.Y.Z` on `main` publishes `@rails49/detector` `X.Y.Z` to npm through
 trusted publishing, then makes a GitHub Release with generated notes.
 
-1. In a pull request, set the version in `lib/detector/package.json`.
-2. Merge it.
-3. Tag the merge commit on `main` and push the tag:
+1. Run [rails49/occupancy](https://github.com/rails49/occupancy)'s gate
+   against this checkout: `bin/with-detector.sh` in an occupancy checkout
+   beside this one.
+2. In a pull request, set the version in `lib/detector/package.json`.
+3. Merge it.
+4. Tag the merge commit on `main` and push the tag:
 
    ```sh
    git tag vX.Y.Z
