@@ -22,8 +22,9 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 
 ## Traps
 
-- `main` takes changes only through a squash-merged PR that passes the `test`
-  check. Start each issue on a new branch from `origin/main`:
+- `main` takes changes only through a PR that passes the `ci` check,
+  squash-merged by hand or rebase-merged by implement-loop. Start each issue on
+  a new branch from `origin/main`:
   `git fetch -q origin && git switch --no-track -c <issue>-<slug> origin/main`.
   Every code change passes the gate and the `code-review` skill before its PR.
 - `SPEC.md` describes the target. Where it or an ADR disagrees with the code

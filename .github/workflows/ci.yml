@@ -3,7 +3,7 @@
 # The hook is faster feedback and catches most things before they reach `main`;
 # this is the gate that cannot be skipped. They are also not redundant — see
 # the Python note on the `bin/test.sh` step below.
-name: test
+name: ci
 
 on:
   push:
@@ -14,11 +14,11 @@ on:
 # an open PR gets one run, not two. Superseded runs on a branch are cancelled;
 # runs on `main` are always left to finish.
 concurrency:
-  group: test-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
