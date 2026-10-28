@@ -56,13 +56,12 @@ detector:
   # 640x384 is a live fallback, not a closed door. Superseded by `canvas`;
   # the runtime and export_onnx.py read it until #10.
   input: [960, 544]
-  # Side of the square every training tile is cut to, in pixels (ADR 0014).
-  # 2048 trains YOLO26l at batch 2 in 29 GiB on the M2 (rails49/occupancy#128).
+  # Side of the square every training tile is cut to, in pixels (ADR 0014,
+  # rails49/occupancy#128).
   canvas: 2048
   # Overlap between neighbouring tiles, in prototype mm, converted to pixels
   # like car width: DPT * tile_overlap_mm / standard_gauge. Longer than the
-  # longest car (25.3 m in ceiling-2026-10-28), so every car lies whole in
-  # some tile.
+  # longest car.
   tile_overlap_mm: 30000
   # Placeholder — needs held-out recall, which no protocol yet measures.
   # It has a floor above zero: at 0 you accept 300 padding slots as phantom

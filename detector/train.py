@@ -132,12 +132,9 @@ def main() -> None:
         project=str(HERE / "runs"),
         name=args.name,
         exist_ok=True,
-        # Every tile is at one DPT, so a car is always the same width in
-        # pixels; scale augmentation would train widths the model never sees.
+        # Every tile is at one DPT (ADR 0014).
         scale=0.0,
-        # An overhead view has no up.
         flipud=0.5,
-        # The rest stay at Ultralytics' defaults.
         seed=0,
         plots=True,
     )

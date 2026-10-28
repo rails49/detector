@@ -4,7 +4,7 @@ import process from 'node:process';
 import sharp from 'sharp';
 import { DETECTOR_CANVAS, DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@detector/config';
 import { R49Archive } from '@rails49/r49';
-import { planArchive, type ImageDecoder, type Span, type Split } from './yolo_rules.ts';
+import { planArchive, type ImageDecoder, type Span, type Split, type TilePlan } from './yolo_rules.ts';
 
 /**
  * Derives the Ultralytics OBB dataset layout from a directory of `.r49`
@@ -125,13 +125,13 @@ async function resetOutDir(outDir: string): Promise<void> {
 }
 
 /** A held-out frame, as `test/tiles.json` records it. */
-interface TestFrame {
+interface HeldOutFrame {
   readonly stem: string;
   readonly dpt: number;
   readonly width: number;
   readonly height: number;
   readonly cars: readonly Span[];
-  readonly tiles: readonly { readonly stem: string; readonly x: number; readonly y: number }[];
+  readonly tiles: readonly Pick<TilePlan, 'stem' | 'x' | 'y'>[];
 }
 
 interface Tally {
@@ -144,8 +144,9 @@ interface Tally {
   cornersClamped: number;
   readonly perSplit: Record<Split, number>;
   readonly warnings: string[];
-  readonly testFrames: TestFrame[];
-  readonly held: Set<string>;
+  readonly heldOutFrames: HeldOutFrame[];
+  /** The `holdout.json` entries this export found. */
+  readonly heldOutFound: Set<string>;
 }
 
 async function exportArchive(
@@ -189,8 +190,7 @@ async function exportArchive(
     const raw = { width: info.width, height: info.height, channels: info.channels };
 
     for (const tile of image.tiles) {
-      const width = Math.min(DETECTOR_CANVAS, image.size.width - tile.x);
-      const height = Math.min(DETECTOR_CANVAS, image.size.height - tile.y);
+      const { width, height } = tile;
       // Padded on the right and bottom, never resized (ADR 0014), in
       // Ultralytics' own fill.
       await sharp(data, { raw })
@@ -211,8 +211,8 @@ async function exportArchive(
     }
 
     if (image.split === 'test') {
-      tally.held.add(`${manifest.id}/${image.filename}`);
-      tally.testFrames.push({
+      tally.heldOutFound.add(`${manifest.id}/${image.filename}`);
+      tally.heldOutFrames.push({
         stem: image.stem,
         dpt: image.dpt,
         ...image.size,
@@ -283,8 +283,8 @@ async function main(): Promise<void> {
     cornersClamped: 0,
     perSplit: { train: 0, val: 0, test: 0 },
     warnings: [],
-    testFrames: [],
-    held: new Set(),
+    heldOutFrames: [],
+    heldOutFound: new Set(),
   };
 
   for (const file of archives) {
@@ -293,10 +293,10 @@ async function main(): Promise<void> {
 
   await fs.writeFile(
     path.join(outDir, 'test', 'tiles.json'),
-    `${JSON.stringify({ canvas: DETECTOR_CANVAS, frames: tally.testFrames }, null, 2)}\n`
+    `${JSON.stringify({ canvas: DETECTOR_CANVAS, frames: tally.heldOutFrames }, null, 2)}\n`
   );
   for (const entry of holdout) {
-    if (!tally.held.has(entry)) {
+    if (!tally.heldOutFound.has(entry)) {
       tally.warnings.push(`holdout.json names ${entry}, which this export did not find`);
     }
   }

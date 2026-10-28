@@ -67,7 +67,7 @@ Three rules:
   bearing, not stylistic.
 
 * **`detector` has two, and the second one is the same idea.** `.` is pure —
-  types, geometry and the two thresholds, importable from node, which is how
+  types, geometry, the tile layout and the two thresholds, importable from node, which is how
   `dataset` gets `spanToPolygon` and occupancy's editor gets `MIN_DPT` without
   loading ORT — and `./browser` carries the ORT session. There is no
   `./geometry`: pure geometry has no dependency to keep out of anything, so a

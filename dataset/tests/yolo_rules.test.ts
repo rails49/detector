@@ -319,6 +319,19 @@ describe('tiling', () => {
   });
 });
 
+describe('a frame smaller than the canvas', () => {
+  it('clamps a car to the frame edge, not into the padding', async () => {
+    // Runs off the right edge of the 1920-wide frame.
+    const built = await build([{ labels: [car({ p0: { x: 1800, y: 540 }, p1: { x: 2000, y: 540 } })] }]);
+    const [tile] = exported((await plan('a', built))[0]).tiles;
+    const xs = tile!.lines[0]!.split(' ').slice(1).filter((_, i) => i % 2 === 0).map(Number);
+
+    expect(tile!.width).toBe(FRAME.width);
+    expect(tile!.cornersClamped).toBe(2);
+    expect(Math.max(...xs)).toBeCloseTo(FRAME.width / DETECTOR_CANVAS, 6);
+  });
+});
+
 describe('the DPT', () => {
   it('is the native DPT when no target is given', async () => {
     const built = await build([{}]);

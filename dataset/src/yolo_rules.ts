@@ -71,9 +71,12 @@ export interface TilePlan {
   /** The tile's top-left corner in the resampled frame. */
   readonly x: number;
   readonly y: number;
+  /** The frame pixels the tile holds; less than the canvas where it is padded. */
+  readonly width: number;
+  readonly height: number;
   /** One per car whose box reaches into the tile. Empty is an all-background sample. */
   readonly lines: readonly string[];
-  /** Corners `spanToPolygon` moved onto the tile edge. */
+  /** Corners `spanToPolygon` moved onto the edge of the tile's pixels. */
   readonly cornersClamped: number;
 }
 
@@ -153,7 +156,6 @@ export async function planArchive(
         `so car width cannot be derived. Calibrate it in the editor, or move it out of --in.`,
     };
   }
-  // Resampling up would invent pixels the camera never recorded.
   if (targetDpt !== undefined && targetDpt > dpt) {
     return {
       kind: 'fatal',
@@ -230,12 +232,9 @@ export async function planArchive(
     const tiles: TilePlan[] = [];
     for (const y of tileOrigins(size.height, overlapPx)) {
       for (const x of tileOrigins(size.width, overlapPx)) {
-        const tile = rectangle(
-          x,
-          y,
-          Math.min(DETECTOR_CANVAS, size.width - x),
-          Math.min(DETECTOR_CANVAS, size.height - y)
-        );
+        const width = Math.min(DETECTOR_CANVAS, size.width - x);
+        const height = Math.min(DETECTOR_CANVAS, size.height - y);
+        const tile = rectangle(x, y, width, height);
         const lines: string[] = [];
         let cornersClamped = 0;
         for (const car of cars) {
@@ -245,11 +244,14 @@ export async function planArchive(
             p0: { x: car.span.p0.x - x, y: car.span.p0.y - y },
             p1: { x: car.span.p1.x - x, y: car.span.p1.y - y },
           };
-          const box = spanToPolygon(shifted, widthPx, { width: DETECTOR_CANVAS, height: DETECTOR_CANVAS });
+          // Clamped to the tile's pixels, then normalized against the canvas
+          // they are padded onto.
+          const box = spanToPolygon(shifted, widthPx, { width, height });
+          const corners = box.corners.map((c, i) => (c * (i % 2 === 0 ? width : height)) / DETECTOR_CANVAS);
           cornersClamped += box.clamped;
-          lines.push(labelLine(car.classIndex, box.corners));
+          lines.push(labelLine(car.classIndex, corners));
         }
-        tiles.push({ stem: `${stem}__${x}_${y}`, x, y, lines, cornersClamped });
+        tiles.push({ stem: `${stem}__${x}_${y}`, x, y, width, height, lines, cornersClamped });
       }
     }
 

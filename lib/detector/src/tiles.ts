@@ -1,11 +1,5 @@
 import { DETECTOR_CANVAS, DETECTOR_TILE_OVERLAP_MM, STANDARD_GAUGE } from './generated.ts';
 
-/**
- * Where tiles go on a frame larger than the canvas (ADR 0014). The export cuts
- * training tiles with these, and `detect` will cut its input with the same ones
- * (#10).
- */
-
 /** The overlap between neighbouring tiles, in pixels at `dpt`. */
 export function tileOverlapPx(dpt: number): number {
   return (dpt * DETECTOR_TILE_OVERLAP_MM) / STANDARD_GAUGE;
