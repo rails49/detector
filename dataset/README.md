@@ -21,11 +21,15 @@ that holds no `data.yaml`, so a mistyped `--out` cannot eat your home
 directory). Both are gitignored. Point `--in` at a checkout of
 [`rails49/r49`](https://github.com/rails49/r49); the labels live there, not here.
 
+`--dpt <n>` resamples every image to DPT `n`. Without it each image keeps its
+native DPT.
+
 ```
 yolo/
-  data.yaml                                 path/train/val + the class names
-  images/{train,val}/<archive>__<image>.jpeg
-  labels/{train,val}/<archive>__<image>.txt  class + 8 normalized corners
+  data.yaml                                         path/train/val/test + the class names
+  images/{train,val,test}/<archive>__<image>__<x>_<y>.jpg   one canvas tile
+  labels/{train,val,test}/<archive>__<image>__<x>_<y>.txt   class + 8 normalized corners
+  test/tiles.json                                   each held-out tile's place in its frame, and the frame's cars
 ```
 
 The rules it applies are `SPEC.md` § YOLO annotations:
@@ -40,18 +44,22 @@ The rules it applies are `SPEC.md` § YOLO annotations:
   DPT means no derivable width), a zero-length span, a missing image.
 * **Width is derived, not stored** — `DPT × standard_width / standard_gauge`.
   The scale ratio cancels, so a car is 2.09 track-widths wide in every scale.
-* **The split is by image and by hash**, so re-exporting reshuffles nothing and
-  two cars in one frame cannot land on opposite sides. Ratio:
-  `detector.val_split`.
-* Corners are **clamped** into `[0, 1]`; Ultralytics rejects a label file
-  carrying one outside, and a clamped box beats no box. The run reports how
-  many moved.
+* **Every image is cut into `detector.canvas` tiles** overlapping by
+  `detector.tile_overlap_mm`, converted to pixels like car width. A frame
+  smaller than the canvas is one tile, padded on the right and bottom.
+* **The held-out images are named** in `holdout.json`, as `<archive id>/<filename>`,
+  and go to `test`. The rest **split by image and by hash**, so re-exporting
+  reshuffles nothing and two cars in one frame cannot land on opposite sides.
+  Ratio: `detector.val_split`.
+* A tile carries every car whose box reaches into it. Corners are **clamped**
+  into the tile; Ultralytics rejects a label file carrying one outside, and a
+  clamped box beats no box. The run reports how many moved.
 * An image that decodes at another size than `camera.resolution` **warns** and
   still exports: its labels are normalized against `camera.resolution`.
 
 `src/yolo_rules.ts` holds all of these as one function, `planArchive`: a
-manifest and an image decoder in, and per image the split, the file stem, the
-label lines and warnings, or the reasons it is fatal. Nothing in it touches the
+manifest and an image decoder in, and per image the split, the resampled size,
+the tiles with their label lines, and warnings, or the reasons it is fatal. Nothing in it touches the
 filesystem or `sharp`, and it is where the tests point; `src/yolo_export.ts`
 only walks directories, decodes, writes what it is handed and reports, and
 names every fatal image of an archive before writing any of it. The car box itself is not there: `carWidthPx` and `spanToPolygon`

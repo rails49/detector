@@ -1,8 +1,15 @@
 import crypto from 'node:crypto';
-import path from 'node:path';
-import { DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@detector/config';
-import { carWidthPx, detectorClassIndex, spanToPolygon } from '@rails49/detector';
-import { getDPT, type ManifestData } from '@rails49/r49';
+import { DETECTOR_CANVAS, DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@detector/config';
+import {
+  carWidthPx,
+  convexIntersectionArea,
+  detectorClassIndex,
+  spanCorners,
+  spanToPolygon,
+  tileOrigins,
+  tileOverlapPx,
+} from '@rails49/detector';
+import { getDPT, type ManifestData, type Point } from '@rails49/r49';
 
 /**
  * The rules of the YOLO OBB export, with no filesystem in it.
@@ -13,6 +20,10 @@ import { getDPT, type ManifestData } from '@rails49/r49';
  * what it is handed. The image decoder is a parameter, so a test can state a
  * decoded size without `sharp` and the rules are pinned by assertions rather
  * than by a run over a corpus.
+ *
+ * Each image is resampled to the target DPT and cut into canvas-sized tiles
+ * (ADR 0014); every tile carries the cars whose box reaches into it, clamped
+ * to the tile.
  *
  * The one hard gate is `labeled_complete`: an image whose labeling a human has
  * not vouched for is skipped whole, because a single unlabeled car in an
@@ -27,8 +38,11 @@ import { getDPT, type ManifestData } from '@rails49/r49';
  * boxes toward `occupied` has one home rather than two.
  */
 
-/** Which side of the split an image falls on. */
-export type Split = 'train' | 'val';
+/**
+ * Which side of the split an image falls on. `test` holds the held-out
+ * images, which are named rather than hashed.
+ */
+export type Split = 'train' | 'val' | 'test';
 
 /** The size an image decodes to, in pixels. */
 export interface ImageSize {
@@ -43,6 +57,26 @@ export interface ImageSize {
  */
 export type ImageDecoder = (filename: string) => Promise<ImageSize | null>;
 
+/** A car span in the resampled frame's pixels. */
+export interface Span {
+  readonly id: string;
+  readonly p0: Point;
+  readonly p1: Point;
+}
+
+/** One canvas-sized piece of an exported image. */
+export interface TilePlan {
+  /** Shared by the tile's image file and its label file; Ultralytics pairs them by it. */
+  readonly stem: string;
+  /** The tile's top-left corner in the resampled frame. */
+  readonly x: number;
+  readonly y: number;
+  /** One per car whose box reaches into the tile. Empty is an all-background sample. */
+  readonly lines: readonly string[];
+  /** Corners `spanToPolygon` moved onto the tile edge. */
+  readonly cornersClamped: number;
+}
+
 /** What the export does with one manifest image. */
 export type ImagePlan =
   | {
@@ -54,14 +88,15 @@ export type ImagePlan =
       readonly kind: 'exported';
       readonly filename: string;
       readonly split: Split;
-      /** Shared by the image file and its label file; Ultralytics pairs them by it. */
+      /** The image's own stem, which each tile stem extends. */
       readonly stem: string;
-      /** The image file's extension, dot included. */
-      readonly ext: string;
-      /** One per car. Empty is an all-background sample, not a mistake. */
-      readonly lines: readonly string[];
-      /** Corners `spanToPolygon` moved onto the frame edge. */
-      readonly cornersClamped: number;
+      /** The DPT the image is resampled to. */
+      readonly dpt: number;
+      /** The resampled frame, `camera.resolution` scaled from native to `dpt`. */
+      readonly size: ImageSize;
+      /** Every car, in the resampled frame. */
+      readonly cars: readonly Span[];
+      readonly tiles: readonly TilePlan[];
       readonly warnings: readonly string[];
     }
   | {
@@ -80,6 +115,16 @@ export type ArchivePlan =
       readonly reason: string;
     };
 
+/** How `planArchive` exports. */
+export interface PlanOptions {
+  /** The fraction hashed to `val`. Defaults to `detector.val_split`. */
+  readonly valSplit?: number;
+  /** The DPT to resample to. Absent keeps the archive's native DPT. */
+  readonly dpt?: number;
+  /** Held-out images, as `<archive id>/<filename>`; these go to `test`. */
+  readonly holdout?: ReadonlySet<string>;
+}
+
 /**
  * The export of one archive, decided without writing anything.
  *
@@ -89,14 +134,12 @@ export type ArchivePlan =
  *
  * @param archiveName The archive's basename without `.r49`; it qualifies every
  *        stem and keys the split.
- * @param valSplit The fraction hashed to `val`. Defaults to
- *        `detector.val_split`.
  */
 export async function planArchive(
   archiveName: string,
   manifest: ManifestData,
   decode: ImageDecoder,
-  valSplit: number = DETECTOR_VAL_SPLIT
+  { valSplit = DETECTOR_VAL_SPLIT, dpt: targetDpt, holdout = new Set() }: PlanOptions = {}
 ): Promise<ArchivePlan> {
   // Width comes from DPT, so an uncalibrated archive has no derivable box at
   // all. Fatal rather than skipped: silently exporting five of six archives is
@@ -110,8 +153,19 @@ export async function planArchive(
         `so car width cannot be derived. Calibrate it in the editor, or move it out of --in.`,
     };
   }
-  const widthPx = carWidthPx(dpt);
+  // Resampling up would invent pixels the camera never recorded.
+  if (targetDpt !== undefined && targetDpt > dpt) {
+    return {
+      kind: 'fatal',
+      reason: `${archiveName}: native DPT ${dpt.toFixed(1)} is below the target DPT ${targetDpt}.`,
+    };
+  }
+  const outDpt = targetDpt ?? dpt;
+  const scale = outDpt / dpt;
+  const widthPx = carWidthPx(outDpt);
+  const overlapPx = tileOverlapPx(outDpt);
   const frame = manifest.camera.resolution;
+  const size = { width: Math.round(frame.width * scale), height: Math.round(frame.height * scale) };
 
   const images: ImagePlan[] = [];
   for (const image of manifest.images) {
@@ -141,8 +195,7 @@ export async function planArchive(
       );
     }
 
-    const lines: string[] = [];
-    let cornersClamped = 0;
+    const cars: { span: Span; classIndex: number; corners: readonly Point[] }[] = [];
     for (const label of image.labels) {
       const classIndex = detectorClassIndex(label.class);
       if (classIndex === null) {
@@ -156,15 +209,16 @@ export async function planArchive(
         continue;
       }
 
-      let box: ReturnType<typeof spanToPolygon>;
+      const span = {
+        id: label.id,
+        p0: { x: label.p0.x * scale, y: label.p0.y * scale },
+        p1: { x: label.p1.x * scale, y: label.p1.y * scale },
+      };
       try {
-        box = spanToPolygon(label, widthPx, frame);
+        cars.push({ span, classIndex, corners: spanCorners(span, widthPx) });
       } catch (err) {
         reasons.push(`${where}: ${err instanceof Error ? err.message : String(err)}`);
-        continue;
       }
-      cornersClamped += box.clamped;
-      lines.push(labelLine(classIndex, box.corners));
     }
 
     if (reasons.length > 0) {
@@ -172,19 +226,57 @@ export async function planArchive(
       continue;
     }
 
+    const stem = outputStem(archiveName, filename);
+    const tiles: TilePlan[] = [];
+    for (const y of tileOrigins(size.height, overlapPx)) {
+      for (const x of tileOrigins(size.width, overlapPx)) {
+        const tile = rectangle(
+          x,
+          y,
+          Math.min(DETECTOR_CANVAS, size.width - x),
+          Math.min(DETECTOR_CANVAS, size.height - y)
+        );
+        const lines: string[] = [];
+        let cornersClamped = 0;
+        for (const car of cars) {
+          if (convexIntersectionArea(car.corners, tile) === 0) continue;
+          const shifted = {
+            id: car.span.id,
+            p0: { x: car.span.p0.x - x, y: car.span.p0.y - y },
+            p1: { x: car.span.p1.x - x, y: car.span.p1.y - y },
+          };
+          const box = spanToPolygon(shifted, widthPx, { width: DETECTOR_CANVAS, height: DETECTOR_CANVAS });
+          cornersClamped += box.clamped;
+          lines.push(labelLine(car.classIndex, box.corners));
+        }
+        tiles.push({ stem: `${stem}__${x}_${y}`, x, y, lines, cornersClamped });
+      }
+    }
+
     images.push({
       kind: 'exported',
       filename,
-      split: splitFor(archiveName, filename, valSplit),
-      stem: outputStem(archiveName, filename),
-      ext: path.extname(filename) || '.jpg',
-      lines,
-      cornersClamped,
+      split: holdout.has(`${manifest.id}/${filename}`) ? 'test' : splitFor(archiveName, filename, valSplit),
+      stem,
+      dpt: outDpt,
+      size,
+      cars: cars.map(car => car.span),
+      tiles,
       warnings,
     });
   }
 
   return { kind: 'planned', images };
+}
+
+/** An axis-aligned rectangle as a polygon. */
+function rectangle(x: number, y: number, width: number, height: number): Point[] {
+  return [
+    { x, y },
+    { x: x + width, y },
+    { x: x + width, y: y + height },
+    { x, y: y + height },
+  ];
 }
 
 /** One label file line: the class index, then the eight normalized corners. */
@@ -205,7 +297,7 @@ function labelLine(classIndex: number, corners: readonly number[]): string {
  * unit here is the **image**, because two cars in one frame must not land on
  * opposite sides.
  */
-function splitFor(archive: string, filename: string, valSplit: number): Split {
+function splitFor(archive: string, filename: string, valSplit: number): 'train' | 'val' {
   const digest = crypto.createHash('md5').update(`${archive}:${filename}`).digest('hex');
   const bucket = parseInt(digest.slice(0, 8), 16) % 100;
   return bucket < valSplit * 100 ? 'val' : 'train';

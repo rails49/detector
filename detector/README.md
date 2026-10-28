@@ -20,7 +20,10 @@ pnpm --filter dataset run export:yolo
 # 1. fine-tune from the DOTA-pretrained OBB checkpoint
 uv run python train.py --epochs 20
 
-# 2. .pt -> ONNX -> static INT8 -> .ort
+# 2. misses and phantoms on the held-out frames
+uv run python evaluate.py runs/tracer/weights/best.pt
+
+# 3. .pt -> ONNX -> static INT8 -> .ort
 uv run python export_onnx.py
 ```
 

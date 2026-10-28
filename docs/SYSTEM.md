@@ -14,10 +14,10 @@ detector path runs, and the classifier path is parked at its first arrow.
         │
         ├── dataset/src/yolo_export.ts   labeled_complete gate, OBB spans
         │       ▼
-        │   dataset/yolo/                Ultralytics OBB layout, 80/20 by image
-        │       │  detector/train.py       YOLO26n-OBB fine-tune from DOTA
+        │   dataset/yolo/                canvas tiles; held-out test, then 80/20 by image
+        │       │  detector/train.py       YOLO26-OBB fine-tune from DOTA
         │       ▼
-        │   detector/runs/.../best.pt
+        │   detector/runs/.../best.pt  ── detector/evaluate.py: misses, phantoms on held-out frames
         │       │  detector/export_onnx.py ONNX → static INT8 → .ort
         │       ▼
         │   detector/models/             detector_int8.ort (not in git)

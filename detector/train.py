@@ -1,31 +1,24 @@
-"""Fine-tune YOLO26n-OBB on the exported rolling-stock dataset.
+"""Fine-tune a YOLO26-OBB model on the exported rolling-stock tiles.
 
-This is the tracer's training stage: plumbing, not accuracy. The corpus is 46
-fixture images below `layout.min_dpt` with a six-image validation split, so no
-number this prints predicts how a real model would behave. What it does prove is
-that the export in `dataset/src/yolo_export.ts` produces something Ultralytics
-reads, that the OBB head trains on it, and that the result survives the ONNX and
-`.ort` conversions in `export_onnx.py`.
+The export (`dataset/src/yolo_export.ts`) cuts every image into
+`detector.canvas` tiles at one DPT, so this trains at `imgsz = canvas` with
+scale augmentation off. Accuracy is measured afterwards on the held-out tiles by
+`evaluate.py`; the validation split only picks `best.pt`.
 
 Usage:
     uv run python train.py [--epochs 20] [--data ../dataset/yolo/data.yaml]
-    uv run python train.py --hours 10 --patience 30 --name tracer-long
+    uv run python train.py --model yolo26l-obb.pt --batch 2 --hours 8 \\
+        --patience 30 --name ceiling-l
 
-The 20-epoch default is the plumbing run and stays the default. `--hours` is for
-a real training session: the first run stopped at 20 epochs with **validation
-loss still falling** (box 1.575 → 0.861, cls 4.971 → 2.701, no divergence from
-the training curve), which is a model stopped early rather than converged. It
-also missed 23 of 92 cars on images it had *trained on* — a model that has fit
-its data does not do that.
+The 20-epoch default is a plumbing run. `--hours` is for a real training
+session: a run stopped at 20 epochs on the old fixtures had validation loss still
+falling, a model stopped early rather than converged.
 
-**Pass `--name` for a long run.** `exist_ok=True` means a repeat of the default
-name overwrites `runs/tracer/weights/`, and the currently shipped `.ort` was
-exported from those weights.
+**Pass `--name` for a long run.** `exist_ok=True` means a repeat of a name
+overwrites its `runs/<name>/weights/`.
 
-Weights land in `runs/`, which is gitignored. Nothing here is published: see
-`SPEC.md` § Accuracy for why a tracer model must never become a release — a
-longer run improves the numbers without changing that, since the six-image
-validation split is drawn from the same six archives as the training images.
+Weights land in `runs/`, which is gitignored. Nothing here is published
+(`SPEC.md` § Accuracy).
 """
 
 from __future__ import annotations
@@ -48,19 +41,18 @@ REPO = HERE.parent
 PRETRAINED = "yolo26n-obb.pt"
 
 
-def detector_input() -> tuple[int, int]:
-    """`detector.input` from config.yaml, as `(width, height)`.
+def detector_canvas() -> int:
+    """`detector.canvas` from config.yaml, the side of every exported tile.
 
     Read from the authored YAML rather than from `lib/config`: Python does not
     consume the generated TypeScript binding, by the rule in `lib/CLAUDE.md`.
     """
     config = yaml.safe_load((REPO / "config.yaml").read_text())
-    width, height = config["detector"]["input"]
-    return int(width), int(height)
+    return int(config["detector"]["canvas"])
 
 
 def main() -> None:
-    width, height = detector_input()
+    canvas = detector_canvas()
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -103,6 +95,11 @@ def main() -> None:
         default="mps",
         help="cpu, mps, or a CUDA index.",
     )
+    parser.add_argument(
+        "--model",
+        default=PRETRAINED,
+        help="Pretrained checkpoint to fine-tune, e.g. yolo26l-obb.pt.",
+    )
     parser.add_argument("--name", default="tracer", help="Run directory under runs/.")
     args = parser.parse_args()
 
@@ -112,7 +109,7 @@ def main() -> None:
             f"    pnpm --filter dataset run export:yolo -- --in <corpus>\n"
         )
 
-    model = YOLO(PRETRAINED)
+    model = YOLO(args.model)
 
     started = time.monotonic()
     model.train(
@@ -127,19 +124,20 @@ def main() -> None:
         # that has already bottomed out.
         time=args.hours,
         patience=args.patience,
-        # Ultralytics takes a single `imgsz` for training and letterboxes to it.
-        # The rectangular 960x544 shape is applied at *export* instead, which is
-        # where it decides the deployed graph — see export_onnx.py.
-        imgsz=max(width, height),
+        # The export pads every tile to the canvas, so Ultralytics' letterbox
+        # to `imgsz` changes nothing (ADR 0014).
+        imgsz=canvas,
         batch=args.batch,
         device=args.device,
         project=str(HERE / "runs"),
         name=args.name,
         exist_ok=True,
-        # The corpus is 46 fixed frames from a handful of fixed camera
-        # positions, so the usual augmentations are doing more work than usual.
-        # Left at Ultralytics' defaults deliberately: tuning them against a
-        # six-image validation split would be fitting noise.
+        # Every tile is at one DPT, so a car is always the same width in
+        # pixels; scale augmentation would train widths the model never sees.
+        scale=0.0,
+        # An overhead view has no up.
+        flipud=0.5,
+        # The rest stay at Ultralytics' defaults.
         seed=0,
         plots=True,
     )

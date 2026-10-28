@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boxCorners, carWidthPx, spanToPolygon } from '../src/geometry.ts';
+import { boxCorners, carWidthPx, spanCorners, spanToPolygon } from '../src/geometry.ts';
 import type { Detection } from '../src/types.ts';
 
 /**
@@ -34,6 +34,18 @@ describe('car width', () => {
     // on to avoid storing width per label.
     expect(carWidthPx(1)).toBeCloseTo(2.0906, 4);
     expect(carWidthPx(18.5) / carWidthPx(1)).toBeCloseTo(18.5, 10);
+  });
+});
+
+describe('span corners', () => {
+  it('are the span widened by half a car width either side, in pixels and unclamped', () => {
+    const corners = spanCorners({ id: 'c', p0: { x: -10, y: 0 }, p1: { x: 90, y: 0 } }, 20);
+    expect(corners).toEqual([
+      { x: -10, y: 10 },
+      { x: 90, y: 10 },
+      { x: 90, y: -10 },
+      { x: -10, y: -10 },
+    ]);
   });
 });
 

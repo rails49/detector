@@ -6,6 +6,9 @@ The detector side of [rails49 occupancy](https://github.com/rails49/occupancy): 
 
 ### Calibration
 
+**Native DPT**:
+An image's own DPT, from its archive's calibration, before any resampling.
+
 **Minimum DPT**:
 The DPT below which a car is too few pixels across for this project's detector to place it reliably. A reader requirement. See [SPEC § Minimum DPT](SPEC.md#minimum-dpt).
 
@@ -43,3 +46,12 @@ The fixed square every detector input is padded onto, at a constant DPT. See [AD
 
 **Tile**:
 A canvas-sized piece of a capture larger than the canvas. See [ADR 0014](docs/adr/0014-dpt-normalized-input-padded-never-resized.md).
+
+### Training
+
+**Held-out image**:
+An image the detector is never trained on and that never chooses which weights to keep. It only measures a model. The same held-out images measure every model compared against one another.
+_Avoid_: test image
+
+**Validation image**:
+An image not trained on that chooses which weights to keep during training. Its scores are optimistic, so they never stand as a model's accuracy.

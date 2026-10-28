@@ -2,17 +2,24 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import sharp from 'sharp';
-import { DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@detector/config';
+import { DETECTOR_CANVAS, DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@detector/config';
 import { R49Archive } from '@rails49/r49';
-import { planArchive, type ImageDecoder, type Split } from './yolo_rules.ts';
+import { planArchive, type ImageDecoder, type Span, type Split } from './yolo_rules.ts';
 
 /**
  * Derives the Ultralytics OBB dataset layout from a directory of `.r49`
  * archives — directly, with no intermediate database.
  *
- *     images/{train,val}/<archive>__<image>.jpeg
- *     labels/{train,val}/<archive>__<image>.txt
+ *     images/{train,val,test}/<archive>__<image>__<x>_<y>.jpg
+ *     labels/{train,val,test}/<archive>__<image>__<x>_<y>.txt
+ *     test/tiles.json
  *     data.yaml
+ *
+ * Each image is resampled to `--dpt` (its native DPT when absent) and cut into
+ * `detector.canvas` tiles. The held-out images named in `holdout.json` go to
+ * `test`, and `test/tiles.json` records where each of their tiles sits in its
+ * frame, with the frame's cars, so the evaluation can join tile detections
+ * without recomputing the tiling.
  *
  * See SPEC.md § YOLO annotations. What goes where, and what is fatal, is
  * decided by `planArchive` in `yolo_rules.ts`; this script walks directories,
@@ -23,22 +30,27 @@ import { planArchive, type ImageDecoder, type Split } from './yolo_rules.ts';
  * already store.
  */
 
-const USAGE = `Usage: pnpm --filter dataset run export:yolo -- [--in <dir>] [--out <dir>]
+const USAGE = `Usage: pnpm --filter dataset run export:yolo -- [--in <dir>] [--out <dir>] [--dpt <n>]
 
   --in   Directory of .r49 archives, scanned recursively. Default: ./r49
          (a checkout of https://github.com/rails49/r49 works as-is)
   --out  Dataset root to write. Default: ./yolo — gitignored, and replaced
          wholesale on every run.
+  --dpt  DPT to resample every image to. Default: each archive's native DPT.
 `;
+
+const HOLDOUT = new URL('../holdout.json', import.meta.url);
 
 interface Options {
   readonly inDir: string;
   readonly outDir: string;
+  readonly dpt: number | undefined;
 }
 
 function parseArgs(argv: readonly string[]): Options {
   let inDir = 'r49';
   let outDir = 'yolo';
+  let dpt: number | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -52,12 +64,15 @@ function parseArgs(argv: readonly string[]): Options {
       inDir = argv[++i] ?? fail(`--in needs a directory\n\n${USAGE}`);
     } else if (arg === '--out') {
       outDir = argv[++i] ?? fail(`--out needs a directory\n\n${USAGE}`);
+    } else if (arg === '--dpt') {
+      dpt = Number(argv[++i]);
+      if (!(dpt > 0)) fail(`--dpt needs a positive number\n\n${USAGE}`);
     } else {
       fail(`unrecognized argument ${JSON.stringify(arg)}\n\n${USAGE}`);
     }
   }
 
-  return { inDir: path.resolve(inDir), outDir: path.resolve(outDir) };
+  return { inDir: path.resolve(inDir), outDir: path.resolve(outDir), dpt };
 }
 
 function fail(message: string): never {
@@ -109,18 +124,37 @@ async function resetOutDir(outDir: string): Promise<void> {
   await fs.mkdir(outDir, { recursive: true });
 }
 
+/** A held-out frame, as `test/tiles.json` records it. */
+interface TestFrame {
+  readonly stem: string;
+  readonly dpt: number;
+  readonly width: number;
+  readonly height: number;
+  readonly cars: readonly Span[];
+  readonly tiles: readonly { readonly stem: string; readonly x: number; readonly y: number }[];
+}
+
 interface Tally {
   archives: number;
   imagesExported: number;
+  tiles: number;
   imagesSkipped: number;
   cars: number;
   emptyFrames: number;
   cornersClamped: number;
   readonly perSplit: Record<Split, number>;
   readonly warnings: string[];
+  readonly testFrames: TestFrame[];
+  readonly held: Set<string>;
 }
 
-async function exportArchive(file: string, outDir: string, tally: Tally): Promise<void> {
+async function exportArchive(
+  file: string,
+  outDir: string,
+  dpt: number | undefined,
+  holdout: ReadonlySet<string>,
+  tally: Tally
+): Promise<void> {
   const archiveName = path.basename(file, '.r49');
   const archive = await R49Archive.load(await fs.readFile(file));
 
@@ -131,7 +165,8 @@ async function exportArchive(file: string, outDir: string, tally: Tally): Promis
     return { width: width ?? 0, height: height ?? 0 };
   };
 
-  const plan = await planArchive(archiveName, archive.getManifest(), decode, DETECTOR_VAL_SPLIT);
+  const manifest = archive.getManifest();
+  const plan = await planArchive(archiveName, manifest, decode, { dpt, holdout });
   if (plan.kind === 'fatal') fail(plan.reason);
 
   // Every fatal image is named before anything of this archive is written.
@@ -144,17 +179,51 @@ async function exportArchive(file: string, outDir: string, tally: Tally): Promis
       continue;
     }
 
+    // Decoded once to raw pixels at the target size; each tile is cut from that.
     const bytes = (await archive.getImage(image.filename))!;
-    await fs.writeFile(path.join(outDir, 'images', image.split, `${image.stem}${image.ext}`), bytes);
-    await fs.writeFile(
-      path.join(outDir, 'labels', image.split, `${image.stem}.txt`),
-      image.lines.length > 0 ? `${image.lines.join('\n')}\n` : ''
-    );
+    const { data, info } = await sharp(Buffer.from(bytes))
+      .resize(image.size.width, image.size.height)
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const raw = { width: info.width, height: info.height, channels: info.channels };
+
+    for (const tile of image.tiles) {
+      const width = Math.min(DETECTOR_CANVAS, image.size.width - tile.x);
+      const height = Math.min(DETECTOR_CANVAS, image.size.height - tile.y);
+      // Padded on the right and bottom, never resized (ADR 0014), in
+      // Ultralytics' own fill.
+      await sharp(data, { raw })
+        .extract({ left: tile.x, top: tile.y, width, height })
+        .extend({
+          right: DETECTOR_CANVAS - width,
+          bottom: DETECTOR_CANVAS - height,
+          background: { r: 114, g: 114, b: 114 },
+        })
+        .jpeg({ quality: 95 })
+        .toFile(path.join(outDir, 'images', image.split, `${tile.stem}.jpg`));
+      await fs.writeFile(
+        path.join(outDir, 'labels', image.split, `${tile.stem}.txt`),
+        tile.lines.length > 0 ? `${tile.lines.join('\n')}\n` : ''
+      );
+      tally.cornersClamped += tile.cornersClamped;
+      tally.tiles++;
+    }
+
+    if (image.split === 'test') {
+      tally.held.add(`${manifest.id}/${image.filename}`);
+      tally.testFrames.push({
+        stem: image.stem,
+        dpt: image.dpt,
+        ...image.size,
+        cars: image.cars,
+        tiles: image.tiles.map(({ stem, x, y }) => ({ stem, x, y })),
+      });
+    }
 
     tally.warnings.push(...image.warnings);
-    tally.cornersClamped += image.cornersClamped;
-    tally.cars += image.lines.length;
-    if (image.lines.length === 0) tally.emptyFrames++;
+    tally.cars += image.cars.length;
+    if (image.cars.length === 0) tally.emptyFrames++;
     tally.perSplit[image.split]++;
     tally.imagesExported++;
   }
@@ -178,6 +247,7 @@ function renderDataYaml(outDir: string): string {
     `path: ${outDir}`,
     'train: images/train',
     'val: images/val',
+    'test: images/test',
     '',
     'names:',
     names,
@@ -186,7 +256,8 @@ function renderDataYaml(outDir: string): string {
 }
 
 async function main(): Promise<void> {
-  const { inDir, outDir } = parseArgs(process.argv.slice(2));
+  const { inDir, outDir, dpt } = parseArgs(process.argv.slice(2));
+  const holdout = new Set<string>(JSON.parse(await fs.readFile(HOLDOUT, 'utf8')));
 
   const archives = await findArchives(inDir).catch(() => {
     fail(`cannot read ${inDir}. Pass --in <dir> pointing at a directory of .r49 archives.`);
@@ -196,7 +267,8 @@ async function main(): Promise<void> {
   }
 
   await resetOutDir(outDir);
-  for (const split of ['train', 'val'] as const) {
+  await fs.mkdir(path.join(outDir, 'test'));
+  for (const split of ['train', 'val', 'test'] as const) {
     await fs.mkdir(path.join(outDir, 'images', split), { recursive: true });
     await fs.mkdir(path.join(outDir, 'labels', split), { recursive: true });
   }
@@ -204,16 +276,29 @@ async function main(): Promise<void> {
   const tally: Tally = {
     archives: 0,
     imagesExported: 0,
+    tiles: 0,
     imagesSkipped: 0,
     cars: 0,
     emptyFrames: 0,
     cornersClamped: 0,
-    perSplit: { train: 0, val: 0 },
+    perSplit: { train: 0, val: 0, test: 0 },
     warnings: [],
+    testFrames: [],
+    held: new Set(),
   };
 
   for (const file of archives) {
-    await exportArchive(file, outDir, tally);
+    await exportArchive(file, outDir, dpt, holdout, tally);
+  }
+
+  await fs.writeFile(
+    path.join(outDir, 'test', 'tiles.json'),
+    `${JSON.stringify({ canvas: DETECTOR_CANVAS, frames: tally.testFrames }, null, 2)}\n`
+  );
+  for (const entry of holdout) {
+    if (!tally.held.has(entry)) {
+      tally.warnings.push(`holdout.json names ${entry}, which this export did not find`);
+    }
   }
 
   await fs.writeFile(path.join(outDir, 'data.yaml'), renderDataYaml(outDir));
@@ -225,10 +310,11 @@ async function main(): Promise<void> {
   console.log(
     [
       `Exported ${tally.imagesExported} images (${tally.cars} cars) from ${tally.archives} archives.`,
-      `  train ${tally.perSplit.train} / val ${tally.perSplit.val}`,
+      `  train ${tally.perSplit.train} / val ${tally.perSplit.val} / test ${tally.perSplit.test} images`,
+      `  ${tally.tiles} tiles`,
       `  ${tally.imagesSkipped} images skipped: not labeled_complete`,
       `  ${tally.emptyFrames} exported frames carry no cars (all-background samples)`,
-      `  ${tally.cornersClamped} corners clamped to the frame edge`,
+      `  ${tally.cornersClamped} corners clamped to a tile edge`,
       `  → ${path.join(outDir, 'data.yaml')}`,
     ].join('\n')
   );
