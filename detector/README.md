@@ -25,6 +25,9 @@ uv run python evaluate.py runs/tracer/weights/best.pt
 #    and the frames with their detections drawn, in runs/tracer/held-out/
 uv run python evaluate.py runs/tracer/weights/best.pt --draw runs/tracer/held-out
 
+# a new capture before it is labeled: every image with its detections drawn
+uv run python detect.py runs/tracer/weights/best.pt <archive.r49> --dpt <dpt> --out <dir>
+
 # 3. .pt -> ONNX -> static INT8 -> .ort
 uv run python export_onnx.py
 ```

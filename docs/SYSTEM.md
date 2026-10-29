@@ -18,6 +18,7 @@ detector path runs, and the classifier path is parked at its first arrow.
         │       │  detector/train.py       YOLO26-OBB fine-tune from DOTA
         │       ▼
         │   detector/runs/.../best.pt  ── detector/evaluate.py: misses, phantoms on held-out frames
+        │       │                     ── detector/detect.py: detections drawn on an unlabeled archive
         │       │  detector/export_onnx.py ONNX → static INT8 → .ort
         │       ▼
         │   detector/models/             detector_int8.ort (not in git)

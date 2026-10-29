@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Iterable
 from pathlib import Path
 from typing import cast
 
@@ -140,15 +141,20 @@ def draw(
 
 
 def frame_detections(
-    model: YOLO, frame: dict, images: Path, canvas: int, device: str, nms_iou: float
+    model: YOLO,
+    tiles: Iterable[tuple[Path | np.ndarray, int, int]],
+    canvas: int,
+    device: str,
+    nms_iou: float,
 ):
-    """A held-out frame's detections in frame pixels, as `(xywhr, conf)`."""
+    """A frame's detections in frame pixels, as `(xywhr, conf)`, from its tiles
+    given as `(image, x, y)`: a file or a BGR array, and the tile's offset."""
     boxes, scores = [], []
-    for tile in frame["tiles"]:
+    for source, x, y in tiles:
         [result] = cast(
             list[Results],
             model.predict(
-                images / f"{tile['stem']}.jpg",
+                source,
                 imgsz=canvas,
                 conf=PREDICT_CONF,
                 device=device,
@@ -157,8 +163,8 @@ def frame_detections(
         )
         obb = cast(OBB, result.obb)
         xywhr = cast(torch.Tensor, obb.xywhr).cpu().clone()
-        xywhr[:, 0] += tile["x"]
-        xywhr[:, 1] += tile["y"]
+        xywhr[:, 0] += x
+        xywhr[:, 1] += y
         boxes.append(xywhr)
         scores.append(cast(torch.Tensor, obb.conf).cpu())
     xywhr, conf = torch.cat(boxes), torch.cat(scores)
@@ -198,9 +204,8 @@ def main() -> None:
         args.draw.mkdir(parents=True, exist_ok=True)
     frames = []
     for frame in held_out["frames"]:
-        xywhr, conf = frame_detections(
-            model, frame, images, canvas, args.device, nms_iou
-        )
+        tiles = ((images / f"{t['stem']}.jpg", t["x"], t["y"]) for t in frame["tiles"])
+        xywhr, conf = frame_detections(model, tiles, canvas, args.device, nms_iou)
         corners = cast(torch.Tensor, xywhr2xyxyxyxy(xywhr))
         frames.append((frame["stem"], corners, conf, car_midpoints(frame["cars"])))
         if args.draw:
