@@ -26,8 +26,9 @@ feasibility research (rails49/occupancy#3); this script is that path, run on tra
 weights instead. Expect ~3.3 MiB out.
 
 With `--canvas`, the export and calibration use the square `detector.canvas`
-tiles training uses instead of `detector.input`, for `evaluate.py` to score the
-INT8 model. `--data` names the export to calibrate on, at the model's DPT.
+tiles training uses instead of `detector.input`, and the script stops after the
+INT8 ONNX file, which `evaluate.py` scores. `--data` names the dataset root whose
+training tiles calibrate, at the model's DPT.
 
 Usage:
     uv run python export_onnx.py [--weights runs/tracer/weights/best.pt]
@@ -71,6 +72,19 @@ def detector_input() -> tuple[int, int]:
     """`detector.input` from config.yaml, as `(width, height)`."""
     width, height = _detector_config()["input"]
     return int(width), int(height)
+
+
+def detector_canvas() -> int:
+    """`detector.canvas` from config.yaml, the side of every training tile."""
+    return int(_detector_config()["canvas"])
+
+
+def copy_metadata(source: Path, target: Path) -> None:
+    """Add `source`'s ONNX metadata to `target`, where Ultralytics reads the task,
+    class names and head type."""
+    model = onnx.load(str(target))
+    model.metadata_props.extend(onnx.load(str(source)).metadata_props)
+    onnx.save(model, str(target))
 
 
 def confidence_threshold() -> float:
@@ -156,7 +170,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.canvas:
-        width = height = int(_detector_config()["canvas"])
+        width = height = detector_canvas()
     else:
         width, height = detector_input()
 
@@ -221,11 +235,10 @@ def main() -> None:
         # does not depend on any naming convention.
         op_types_to_quantize=["Conv"],
     )
-    # Ultralytics reads the task, class names and head type from this metadata.
-    model, quantized = onnx.load(str(fp32)), onnx.load(str(int8))
-    quantized.metadata_props.extend(model.metadata_props)
-    onnx.save(quantized, str(int8))
+    copy_metadata(fp32, int8)
     print(f"   {int8.name}  {int8.stat().st_size / 1024 / 1024:.2f} MiB")
+    if args.canvas:
+        return
 
     # 3. .ort — the format onnxruntime-web loads.
     print("→ .ort")

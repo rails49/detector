@@ -18,8 +18,9 @@ detections at `detector.confidence_threshold`: boxes that contain a car's
 midpoint in green, phantoms in red, each with its confidence. A found car's
 midpoint is a yellow dot; a missed car's span and midpoint are magenta.
 
-`--fp16` runs the model in FP16. An INT8 model is scored from the ONNX file
-`export_onnx.py --canvas` writes, on the CPU.
+`--fp16` runs the PyTorch model in FP16. An INT8 model is the static INT8
+ONNX file `export_onnx.py --canvas` writes, scored with `--device cpu` in ONNX
+Runtime.
 
 Usage:
     uv run python evaluate.py runs/ceiling-l/weights/best.pt
@@ -155,10 +156,11 @@ def frame_detections(
     canvas: int,
     device: str,
     nms_iou: float,
-    fp16: bool = False,
+    quantize: int | None = None,
 ):
     """A frame's detections in frame pixels, as `(xywhr, conf)`, from its tiles
-    given as `(image, x, y)`: a file or a BGR array, and the tile's offset."""
+    given as `(image, x, y)`: a file or a BGR array, and the tile's offset.
+    `quantize` is Ultralytics' precision: 16 for FP16, `None` for FP32."""
     boxes, scores = [], []
     for source, x, y in tiles:
         [result] = cast(
@@ -168,7 +170,7 @@ def frame_detections(
                 imgsz=canvas,
                 conf=PREDICT_CONF,
                 device=device,
-                quantize="fp16" if fp16 else None,
+                quantize=quantize,
                 verbose=False,
             ),
         )
@@ -209,6 +211,7 @@ def main() -> None:
 
     config = yaml.safe_load((REPO / "config.yaml").read_text())["detector"]
     threshold, nms_iou = config["confidence_threshold"], config["nms_iou"]
+    quantize = 16 if args.fp16 else None
     held_out = json.loads((args.data / "test" / "tiles.json").read_text())
     canvas = held_out["canvas"]
     model = YOLO(args.weights, task="obb")
@@ -220,7 +223,7 @@ def main() -> None:
     for frame in held_out["frames"]:
         tiles = ((images / f"{t['stem']}.jpg", t["x"], t["y"]) for t in frame["tiles"])
         xywhr, conf = frame_detections(
-            model, tiles, canvas, args.device, nms_iou, args.fp16
+            model, tiles, canvas, args.device, nms_iou, quantize
         )
         corners = cast(torch.Tensor, xywhr2xyxyxyxy(xywhr))
         frames.append((frame["stem"], corners, conf, car_midpoints(frame["cars"])))
@@ -257,7 +260,7 @@ def main() -> None:
         imgsz=canvas,
         batch=2,
         device=args.device,
-        quantize="fp16" if args.fp16 else None,
+        quantize=quantize,
         plots=False,
     )
     print(f"\nmAP50 on the held-out tiles: {metrics.box.map50:.4f}")
