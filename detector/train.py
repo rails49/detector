@@ -135,6 +135,7 @@ def main() -> None:
         # Every tile is at one DPT (ADR 0014).
         scale=0.0,
         flipud=0.5,
+        degrees=180.0,
         seed=0,
         plots=True,
     )

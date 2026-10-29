@@ -326,7 +326,7 @@ reason the fine-tune must see deployment-DPT data rather than shipping close to 
 2. **Model capacity (§3).** The l/x OBB variants are +2.7–2.8 DOTA mAP50 over the current nano for
    a config-line change; escalate toward the §3 ranking's ensemble only if the measured tail
    demands it.
-3. **Rotation augmentation — currently off.** Ultralytics defaults `degrees=0`
+3. **Rotation augmentation — off when this was written; `train.py` sets `degrees=180.0` since #25.** Ultralytics defaults `degrees=0`
    ([data-augmentation guide](https://docs.ultralytics.com/guides/yolo-data-augmentation/))
    **[DOC]**, and `detector/train.py` deliberately leaves defaults untouched **[SRC]**. For an
    overhead OBB task where cars appear at every orientation but training captures show a median 4°
