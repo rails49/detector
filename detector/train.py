@@ -135,6 +135,8 @@ def main() -> None:
         # Every tile is at one DPT (ADR 0014).
         scale=0.0,
         flipud=0.5,
+        # Cars stand at every angle on the layout.
+        degrees=180.0,
         seed=0,
         plots=True,
     )
