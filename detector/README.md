@@ -24,6 +24,10 @@ uv run python train.py --epochs 20
 uv run python evaluate.py runs/tracer/weights/best.pt
 #    and the frames with their detections drawn, in runs/tracer/held-out/
 uv run python evaluate.py runs/tracer/weights/best.pt --draw runs/tracer/held-out
+#    in FP16, and in INT8 from an export at the training tile size
+uv run python evaluate.py runs/tracer/weights/best.pt --fp16
+uv run python export_onnx.py --weights runs/tracer/weights/best.pt --canvas --out runs/tracer/int8
+uv run python evaluate.py runs/tracer/int8/detector_int8.onnx --device cpu
 
 # a new capture before it is labeled: every image with its detections drawn
 uv run python detect.py runs/tracer/weights/best.pt <archive.r49> --dpt <dpt> --out <dir>
