@@ -22,6 +22,8 @@ uv run python train.py --epochs 20
 
 # 2. misses and phantoms on the held-out frames
 uv run python evaluate.py runs/tracer/weights/best.pt
+#    and the frames with their detections drawn, in runs/tracer/held-out/
+uv run python evaluate.py runs/tracer/weights/best.pt --draw runs/tracer/held-out
 
 # 3. .pt -> ONNX -> static INT8 -> .ort
 uv run python export_onnx.py
