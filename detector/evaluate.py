@@ -107,6 +107,21 @@ def frame_image(frame: dict, images: Path, canvas: int) -> np.ndarray:
     return image
 
 
+def draw_box(image: np.ndarray, box: np.ndarray, score: float, color) -> None:
+    """Draw one box, as integer corners, and its confidence onto `image`."""
+    cv2.polylines(image, [box], True, color, 4)
+    x, y = box.min(axis=0)
+    cv2.putText(
+        image,
+        f"{score:.2f}",
+        (int(x), int(y) - 8),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1.5,
+        color,
+        3,
+    )
+
+
 def draw(
     image: np.ndarray,
     corners: torch.Tensor,
@@ -119,18 +134,7 @@ def draw(
     for box, score, is_phantom in zip(
         corners.round().int().numpy(), conf.tolist(), phantom.tolist()
     ):
-        color = PHANTOM if is_phantom else FOUND
-        cv2.polylines(image, [box], True, color, 4)
-        x, y = box.min(axis=0)
-        cv2.putText(
-            image,
-            f"{score:.2f}",
-            (int(x), int(y) - 8),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1.5,
-            color,
-            3,
-        )
+        draw_box(image, box, score, PHANTOM if is_phantom else FOUND)
     for car, centre, is_missed in zip(
         cars, centres.round().int().tolist(), missed.tolist()
     ):

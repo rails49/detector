@@ -32,7 +32,7 @@ import yaml
 from ultralytics import YOLO
 from ultralytics.utils.ops import xywhr2xyxyxyxy
 
-from evaluate import frame_detections
+from evaluate import draw_box, frame_detections
 
 HERE = Path(__file__).parent
 REPO = HERE.parent
@@ -106,18 +106,7 @@ def main() -> None:
         corners = cast(torch.Tensor, xywhr2xyxyxyxy(xywhr[keep]))
         scores = conf[keep].tolist()
         for box, score in zip(corners.round().int().numpy(), scores):
-            color = SURE if score >= threshold else UNSURE
-            cv2.polylines(image, [box], True, color, 4)
-            x, y = box.min(axis=0)
-            cv2.putText(
-                image,
-                f"{score:.2f}",
-                (int(x), int(y) - 8),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1.5,
-                color,
-                3,
-            )
+            draw_box(image, box, score, SURE if score >= threshold else UNSURE)
         stem = Path(entry["filename"]).stem
         cv2.imwrite(
             str(args.out / f"{stem}.jpg"), image, [cv2.IMWRITE_JPEG_QUALITY, 90]
