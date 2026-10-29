@@ -13,8 +13,14 @@ across thresholds, then Ultralytics' mAP50 on the held-out tiles.
 Duplicates are dropped with Ultralytics' rotated NMS (probabilistic IoU) at
 `detector.nms_iou`, not with the runtime's polygon IoU.
 
+With `--draw DIR`, each held-out frame is written to `DIR/<stem>.jpg` with its
+detections at `detector.confidence_threshold`: boxes that contain a car's
+midpoint in green, phantoms in red, each with its confidence. Every car's
+midpoint is a yellow dot; a missed car's span is drawn in magenta.
+
 Usage:
     uv run python evaluate.py runs/ceiling-l/weights/best.pt
+    uv run python evaluate.py runs/ceiling-l/weights/best.pt --draw runs/ceiling-l/held-out
 """
 
 from __future__ import annotations
@@ -24,6 +30,8 @@ import json
 from pathlib import Path
 from typing import cast
 
+import cv2
+import numpy as np
 import torch
 import yaml
 from ultralytics import YOLO
@@ -38,6 +46,12 @@ REPO = HERE.parent
 # Low enough that every threshold reported below sees its detections.
 PREDICT_CONF = 0.01
 THRESHOLDS = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+
+# BGR.
+FOUND = (0, 200, 0)
+PHANTOM = (0, 0, 255)
+MISSED = (255, 0, 255)
+MIDPOINT = (0, 255, 255)
 
 
 def contains(corners: torch.Tensor, points: torch.Tensor) -> torch.Tensor:
@@ -55,12 +69,64 @@ def contains(corners: torch.Tensor, points: torch.Tensor) -> torch.Tensor:
     return (cross >= 0).all(dim=1) | (cross <= 0).all(dim=1)
 
 
+def matches(
+    corners: torch.Tensor, midpoints: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """`(phantom, missed)` masks: per box, whether it contains no midpoint; per
+    car, whether no box contains its midpoint."""
+    inside = contains(corners, midpoints)
+    return ~inside.any(dim=1), ~inside.any(dim=0)
+
+
 def count(corners: torch.Tensor, midpoints: torch.Tensor) -> tuple[int, int]:
     """`(misses, phantoms)` for one frame's detections against its cars."""
-    inside = contains(corners, midpoints)
-    misses = int((~inside.any(dim=0)).sum())
-    phantoms = int((~inside.any(dim=1)).sum())
-    return misses, phantoms
+    phantom, missed = matches(corners, midpoints)
+    return int(missed.sum()), int(phantom.sum())
+
+
+def frame_image(frame: dict, images: Path, canvas: int) -> np.ndarray:
+    """A held-out frame put back together from its tiles, without the padding."""
+    image = np.zeros((frame["height"], frame["width"], 3), np.uint8)
+    for tile in frame["tiles"]:
+        x, y = tile["x"], tile["y"]
+        w, h = min(canvas, frame["width"] - x), min(canvas, frame["height"] - y)
+        image[y : y + h, x : x + w] = cv2.imread(str(images / f"{tile['stem']}.jpg"))[
+            :h, :w
+        ]
+    return image
+
+
+def draw(
+    image: np.ndarray,
+    corners: torch.Tensor,
+    conf: torch.Tensor,
+    cars: list[dict],
+    midpoints: torch.Tensor,
+) -> None:
+    """Draw one frame's detections and cars onto `image`."""
+    phantom, missed = matches(corners, midpoints)
+    for box, score, bad in zip(
+        corners.round().int().numpy(), conf.tolist(), phantom.tolist()
+    ):
+        color = PHANTOM if bad else FOUND
+        cv2.polylines(image, [box], True, color, 4)
+        x, y = box.min(axis=0)
+        cv2.putText(
+            image,
+            f"{score:.2f}",
+            (int(x), int(y) - 8),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.5,
+            color,
+            3,
+        )
+    for car, point, lost in zip(
+        cars, midpoints.round().int().tolist(), missed.tolist()
+    ):
+        if lost:
+            p0, p1 = car["p0"], car["p1"]
+            cv2.line(image, (p0["x"], p0["y"]), (p1["x"], p1["y"]), MISSED, 6)
+        cv2.circle(image, tuple(point), 10, MISSED if lost else MIDPOINT, -1)
 
 
 def frame_detections(
@@ -104,6 +170,11 @@ def main() -> None:
         help="The dataset root export:yolo wrote.",
     )
     parser.add_argument("--device", default="mps", help="cpu, mps, or a CUDA index.")
+    parser.add_argument(
+        "--draw",
+        type=Path,
+        help="Write each held-out frame, annotated, to this directory.",
+    )
     args = parser.parse_args()
 
     config = yaml.safe_load((REPO / "config.yaml").read_text())["detector"]
@@ -112,10 +183,11 @@ def main() -> None:
     canvas = held_out["canvas"]
     model = YOLO(args.weights)
 
+    images = args.data / "images" / "test"
     frames = []
     for frame in held_out["frames"]:
         xywhr, conf = frame_detections(
-            model, frame, args.data / "images" / "test", canvas, args.device, nms_iou
+            model, frame, images, canvas, args.device, nms_iou
         )
         midpoints = torch.tensor(
             [
@@ -124,6 +196,16 @@ def main() -> None:
             ]
         ).reshape(-1, 2)
         frames.append((frame["stem"], xywhr2xyxyxyxy(xywhr), conf, midpoints))
+
+    if args.draw:
+        args.draw.mkdir(parents=True, exist_ok=True)
+        for frame, (stem, corners, conf, midpoints) in zip(held_out["frames"], frames):
+            image = frame_image(frame, images, canvas)
+            keep = conf >= threshold
+            draw(image, corners[keep], conf[keep], frame["cars"], midpoints)
+            cv2.imwrite(
+                str(args.draw / f"{stem}.jpg"), image, [cv2.IMWRITE_JPEG_QUALITY, 90]
+            )
 
     cars = sum(len(m) for *_, m in frames)
     print(f"{len(frames)} held-out frames, {cars} cars\n")
