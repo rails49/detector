@@ -61,8 +61,10 @@ measurements run for this ticket with torch 2.14.0 on CPU. Geometry constants co
 
 ## Method
 
-The profiling script and analysis script are in the ticket's scratchpad, not the repo. For each
-model and canvas size 640, 1024 and 2048 the script recorded:
+The scripts and their output are in [`compute-per-area/`](compute-per-area/): `profile_flops.py`
+(run from `detector/` with `uv run`, output `flops.json`) and `area.py flops.json` (output
+`tables.md`, `strip_trim.md`). For each model and canvas size 640, 1024 and 2048 the profiling
+script recorded:
 
 - `get_flops(model, s)` on the unfused model (what `model.info()` prints) and on a fused copy;
 - an independent MAC count from forward hooks on every `nn.Conv2d` (output elements × input
