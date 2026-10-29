@@ -25,8 +25,14 @@ All three were verified end-to-end on the released DOTA weights during the
 feasibility research (rails49/occupancy#3); this script is that path, run on trained
 weights instead. Expect ~3.3 MiB out.
 
+With `--canvas`, the export and calibration use the square `detector.canvas`
+tiles training uses instead of `detector.input`, for `evaluate.py` to score the
+INT8 model. `--data` names the export to calibrate on, at the model's DPT.
+
 Usage:
     uv run python export_onnx.py [--weights runs/tracer/weights/best.pt]
+    uv run python export_onnx.py --weights runs/both-l/weights/best.pt --canvas \\
+        --out runs/both-l/int8
 """
 
 from __future__ import annotations
@@ -109,9 +115,9 @@ class FrameCalibrationReader(CalibrationDataReader):
         return next(self._batches, None)
 
 
-def calibration_images(limit: int) -> list[Path]:
-    """Frames from the exported training split, deterministically ordered."""
-    root = REPO / "dataset" / "yolo" / "images" / "train"
+def calibration_images(data: Path, limit: int) -> list[Path]:
+    """Frames from the exported training split, spread evenly across it."""
+    root = data / "images" / "train"
     images = sorted(
         p for p in root.glob("*") if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
     )
@@ -120,12 +126,11 @@ def calibration_images(limit: int) -> list[Path]:
             f"no calibration images under {root}. Export the dataset first:\n"
             f"    pnpm --filter dataset run export:yolo\n"
         )
-    return images[:limit]
+    count = min(limit, len(images))
+    return [images[i * len(images) // count] for i in range(count)]
 
 
 def main() -> None:
-    width, height = detector_input()
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--weights", type=Path, default=HERE / "runs" / "tracer" / "weights" / "best.pt"
@@ -137,7 +142,23 @@ def main() -> None:
         default=10,
         help="Ten sufficed in the rails49/occupancy#3 research; more costs quantization time for little gain.",
     )
+    parser.add_argument(
+        "--canvas",
+        action="store_true",
+        help="Export at detector.canvas, the tile size training uses.",
+    )
+    parser.add_argument(
+        "--data",
+        type=Path,
+        default=REPO / "dataset" / "yolo",
+        help="The dataset root export:yolo wrote, whose training tiles calibrate.",
+    )
     args = parser.parse_args()
+
+    if args.canvas:
+        width = height = int(_detector_config()["canvas"])
+    else:
+        width, height = detector_input()
 
     if not args.weights.exists():
         raise SystemExit(
@@ -169,7 +190,7 @@ def main() -> None:
         .get_inputs()[0]
         .name
     )
-    frames = calibration_images(args.calibration_frames)
+    frames = calibration_images(args.data, args.calibration_frames)
     print(f"→ static INT8, calibrating on {len(frames)} frames")
 
     int8 = args.out / "detector_int8.onnx"
@@ -200,6 +221,10 @@ def main() -> None:
         # does not depend on any naming convention.
         op_types_to_quantize=["Conv"],
     )
+    # Ultralytics reads the task, class names and head type from this metadata.
+    model, quantized = onnx.load(str(fp32)), onnx.load(str(int8))
+    quantized.metadata_props.extend(model.metadata_props)
+    onnx.save(quantized, str(int8))
     print(f"   {int8.name}  {int8.stat().st_size / 1024 / 1024:.2f} MiB")
 
     # 3. .ort — the format onnxruntime-web loads.
