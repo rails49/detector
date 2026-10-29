@@ -110,9 +110,15 @@ The crops need the track's position and direction in image pixels. What exists:
   `track_area.py`) [REPO]. Track that never carried a car is missing from the first and traced in
   the second.
 
-I found no other image-space track geometry in `~/rails49`. If a layout plan with track positions
-in layout mm exists elsewhere, `track_area.py`'s homography maps it to each archive's pixels,
-"z ignored, good to about 3%" [REPO]. Track on a grade or bridge sits off the calibration plane
+- The track plan is `~/iot/modellbahn/docs/trackplan/Gotthard.layout`, outside `~/rails49`. It is
+  a binary RailModeller Pro file (quarantine attribute names the app; no readable text). Its export
+  `Gotthard.pdf` beside it is vector: one page, 1,935 paths, Kato part numbers as text, and a
+  2000 mm × 980 mm dimension that sets the scale. Each piece is a filled polygon coloured by type,
+  with the rails as black strokes [MEAS]. Track centrelines in layout mm can be taken from these
+  paths; nothing does that yet.
+
+`track_area.py`'s homography maps positions in layout mm to each archive's pixels, "z ignored, good
+to about 3%" [REPO]. Track on a grade or bridge sits off the calibration plane
 and shifts in the image; occupancy's ADR 0015 corrects scale for height but not position [REPO].
 
 How many crops. Track length on the ceiling layout, from the labelled spans in layout mm [MEAS]:
@@ -332,8 +338,8 @@ Side by side [INF]. ADR 0004 would need revisiting for any of these.
 
 ## What I could not determine
 
-- A layout file with track positions in layout mm or image pixels. control's drawing is a
-  schematic; r49 stores none. If one exists outside `~/rails49`, §2's homography maps it.
+- Whether the centrelines taken from `Gotthard.pdf` match the built layout closely enough to place
+  43 mm crops. The plan's coordinates and the calibration's layout mm have not been compared (§2).
 - Accuracy of any per-spot classifier on this layout. Nothing has been trained.
 - Whether YOLO26n-cls or MobileNetV3-Small keeps its accuracy at static INT8; the detector's INT8
   path is known to work, the classifiers' is not measured here.
