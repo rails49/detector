@@ -46,6 +46,15 @@ export const SCALES: readonly [Scale, ...Scale[]] = ["G", "O", "S", "HO", "T", "
 /** Detector input resolution, `[width, height]` in pixels. */
 export const DETECTOR_INPUT = [960, 544] as const;
 
+/** Side of the square training tile, in pixels. */
+export const DETECTOR_CANVAS = 2048;
+
+/**
+ * Overlap between neighbouring tiles, in prototype mm. In pixels it is
+ * `DPT * DETECTOR_TILE_OVERLAP_MM / STANDARD_GAUGE`.
+ */
+export const DETECTOR_TILE_OVERLAP_MM = 30000;
+
 /**
  * Single confidence threshold for decoding detections.
  *

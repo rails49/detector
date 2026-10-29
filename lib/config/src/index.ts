@@ -29,6 +29,7 @@ export {
 // @rails49/detector reads its own copy of generated.ts.
 export {
   DETECTOR_INPUT,
+  DETECTOR_CANVAS,
   DETECTOR_CONFIDENCE_THRESHOLD,
   DETECTOR_NMS_IOU,
   DETECTOR_VAL_SPLIT,

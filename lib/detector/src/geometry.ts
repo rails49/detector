@@ -81,6 +81,25 @@ export function spanToPolygon(
   widthPx: number,
   frame: Frame
 ): { readonly corners: readonly number[]; readonly clamped: number } {
+  const corners = spanCorners(label, widthPx).flatMap(c => [c.x, c.y]);
+
+  let clamped = 0;
+  const normalized = corners.map((value, i) => {
+    const scaled = value / (i % 2 === 0 ? frame.width : frame.height);
+    if (scaled < 0 || scaled > 1) clamped++;
+    return Math.min(1, Math.max(0, scaled));
+  });
+
+  return { corners: normalized, clamped };
+}
+
+/**
+ * A car span's four corners in the span's own pixels, unclamped, in the same
+ * winding as `spanToPolygon`.
+ *
+ * @throws If the chord has zero length, as `spanToPolygon` does.
+ */
+export function spanCorners(label: Pick<CarLabel, 'id' | 'p0' | 'p1'>, widthPx: number): readonly Point[] {
   const dx = label.p1.x - label.p0.x;
   const dy = label.p1.y - label.p0.y;
   const length = Math.hypot(dx, dy);
@@ -92,21 +111,7 @@ export function spanToPolygon(
     );
   }
 
-  const corners = offsetCorners(
-    label.p0,
-    label.p1,
-    { x: dx / length, y: dy / length },
-    widthPx
-  ).flatMap(c => [c.x, c.y]);
-
-  let clamped = 0;
-  const normalized = corners.map((value, i) => {
-    const scaled = value / (i % 2 === 0 ? frame.width : frame.height);
-    if (scaled < 0 || scaled > 1) clamped++;
-    return Math.min(1, Math.max(0, scaled));
-  });
-
-  return { corners: normalized, clamped };
+  return offsetCorners(label.p0, label.p1, { x: dx / length, y: dy / length }, widthPx);
 }
 
 /**

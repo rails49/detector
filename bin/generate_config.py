@@ -123,6 +123,8 @@ def render_generated_ts(config: dict, r49: dict) -> str:
     min_dpt = require(config, "layout", "min_dpt")
 
     detector_input = require(config, "detector", "input")
+    canvas = require(config, "detector", "canvas")
+    tile_overlap_mm = require(config, "detector", "tile_overlap_mm")
     confidence_threshold = require(config, "detector", "confidence_threshold")
     nms_iou = require(config, "detector", "nms_iou")
     val_split = require(config, "detector", "val_split")
@@ -212,6 +214,15 @@ def render_generated_ts(config: dict, r49: dict) -> str:
         doc("Detector input resolution, `[width, height]` in pixels."),
         f"export const DETECTOR_INPUT = {ts_literal(detector_input)} as const;",
         "",
+        doc("Side of the square training tile, in pixels."),
+        f"export const DETECTOR_CANVAS = {ts_literal(canvas)};",
+        "",
+        doc(
+            "Overlap between neighbouring tiles, in prototype mm. In pixels it is",
+            "`DPT * DETECTOR_TILE_OVERLAP_MM / STANDARD_GAUGE`.",
+        ),
+        f"export const DETECTOR_TILE_OVERLAP_MM = {ts_literal(tile_overlap_mm)};",
+        "",
         doc(
             "Single confidence threshold for decoding detections.",
             "",
@@ -294,6 +305,7 @@ def render_index_ts() -> str:
             "// @rails49/detector reads its own copy of generated.ts.",
             "export {",
             "  DETECTOR_INPUT,",
+            "  DETECTOR_CANVAS,",
             "  DETECTOR_CONFIDENCE_THRESHOLD,",
             "  DETECTOR_NMS_IOU,",
             "  DETECTOR_VAL_SPLIT,",

@@ -3,7 +3,7 @@
 // This file is the package's interface — the only surface consumers may rely
 // on. Anything not exported here is internal and may change without notice.
 // Per-symbol documentation lives on the declarations in ./types.ts,
-// ./geometry.ts, ./classIndex.ts, ./overlap.ts, ./thresholds.ts and ./model.ts, because TypeScript discards doc comments
+// ./geometry.ts, ./tiles.ts, ./classIndex.ts, ./overlap.ts, ./thresholds.ts and ./model.ts, because TypeScript discards doc comments
 // written on re-export statements.
 //
 // The name undersells it. This root entry point is really the **car box**
@@ -30,7 +30,12 @@ export type { Detection, Frame } from './types.ts';
 // drawable corners in the same winding — which is what lets the UI put ground
 // truth and prediction in one picture and compare them by eye. `carWidthPx` is
 // the constant both are built on, and L1 substitutes for the model's own.
-export { boxCorners, carWidthPx, spanToPolygon } from './geometry.ts';
+export { boxCorners, carWidthPx, spanCorners, spanToPolygon } from './geometry.ts';
+
+//── Tiles ────────────────────────────────────────────────────────────────────
+// Where a frame larger than the canvas is cut. The export cuts training tiles
+// with these, and `detect` will cut its input with the same ones (#10).
+export { tileOrigins, tileOverlapPx } from './tiles.ts';
 
 //── Class index ──────────────────────────────────────────────────────────────
 // The YOLO class a stored `class` trains as. The class list is this project's

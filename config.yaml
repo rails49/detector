@@ -53,8 +53,16 @@ layout:
 # Detector parameters (YOLO26n-OBB)
 # ====================================================================================
 detector:
-  # 640x384 is a live fallback, not a closed door
+  # 640x384 is a live fallback, not a closed door. Superseded by `canvas`;
+  # the runtime and export_onnx.py read it until #10.
   input: [960, 544]
+  # Side of the square every training tile is cut to, in pixels (ADR 0014,
+  # rails49/occupancy#128).
+  canvas: 2048
+  # Overlap between neighbouring tiles, in prototype mm, converted to pixels
+  # like car width: DPT * tile_overlap_mm / standard_gauge. Longer than the
+  # longest car.
+  tile_overlap_mm: 30000
   # Placeholder — needs held-out recall, which no protocol yet measures.
   # It has a floor above zero: at 0 you accept 300 padding slots as phantom
   # cars and every sensor reads `occupied` on every frame.
