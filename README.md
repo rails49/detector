@@ -86,6 +86,6 @@ later version. See [LICENSE](LICENSE) for the full text.
 The project is AGPL-3.0 because the detector is fine-tuned from
 [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) weights, which
 are AGPL-3.0 licensed; trained weights inherit those terms
-([ADR 0003](docs/adr/0003-agpl-because-the-detector-is-fine-tuned-from-agpl-weights.md)).
+([ADR 0015](docs/adr/0015-only-the-yolo-detector-is-agpl.md)).
 If you deploy a modified version, the licence requires you to make your source
 available to its users.
