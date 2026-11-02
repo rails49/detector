@@ -41,8 +41,6 @@ from export_onnx import copy_metadata
 HERE = Path(__file__).parent
 OUT = HERE.parent / "bench" / "public" / "data"
 SIDES = (2048, 1024)
-STANDARD_GAUGE_MM = 1435
-TILE_OVERLAP_MM = 30000
 
 
 class TileReader(CalibrationDataReader):
@@ -61,9 +59,7 @@ def write_frames(
     """Resample the first `count` images of `archive` to `dpt` and save them."""
     scale = dpt / native_dpt
     with zipfile.ZipFile(archive) as zf:
-        meta = json.loads(
-            zf.read(next(n for n in zf.namelist() if n.endswith(".json")))
-        )
+        meta = json.loads(zf.read("manifest.json"))
         names = [image["filename"] for image in meta["images"][:count]]
         images = [
             Image.open(io.BytesIO(zf.read(name))).convert("RGB") for name in names
@@ -185,7 +181,6 @@ def main() -> None:
     manifest |= {
         "model": args.name,
         "dpt": args.dpt,
-        "overlap": round(args.dpt * TILE_OVERLAP_MM / STANDARD_GAUGE_MM),
         "models": models,
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")

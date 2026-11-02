@@ -19,29 +19,38 @@ export class Camera {
   private timer?: number;
   private stopped = false;
   private readonly canvas = document.createElement('canvas');
+  private context?: CanvasRenderingContext2D;
+  private readonly settings: MediaTrackSettings;
+  private readonly capabilities: MediaTrackCapabilities;
 
   private constructor(
     private readonly video: HTMLVideoElement,
     private readonly stream: MediaStream,
     private readonly requested: string,
     private readonly load: CameraLoad,
-  ) {}
+  ) {
+    const track = stream.getVideoTracks()[0];
+    this.settings = track.getSettings();
+    this.capabilities = track.getCapabilities?.() ?? {};
+  }
 
   static async start(video: HTMLVideoElement, width: number, height: number, load: CameraLoad): Promise<Camera> {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: { facingMode: 'environment', width: { ideal: width }, height: { ideal: height } },
     });
-    video.srcObject = stream;
-    await video.play();
+    try {
+      video.srcObject = stream;
+      await video.play();
+    } catch (error) {
+      for (const track of stream.getTracks()) track.stop();
+      video.srcObject = null;
+      throw error;
+    }
     const camera = new Camera(video, stream, `${width}×${height}`, load);
     camera.watchFrames();
     if (load !== 'none') camera.timer = window.setInterval(() => camera.drawFrame(), LOAD_PERIOD_MS);
     return camera;
-  }
-
-  private get track(): MediaStreamTrack {
-    return this.stream.getVideoTracks()[0];
   }
 
   private watchFrames(): void {
@@ -61,7 +70,9 @@ export class Camera {
       this.canvas.width = width;
       this.canvas.height = height;
     }
-    const context = this.canvas.getContext('2d', { willReadFrequently: true })!;
+    // CPU-backed only when the whole frame is read back.
+    this.context ??= this.canvas.getContext('2d', { willReadFrequently: this.load === 'read' })!;
+    const context = this.context;
     const t0 = performance.now();
     context.drawImage(this.video, 0, 0);
     // Reading one pixel makes the draw finish before the clock stops.
@@ -85,14 +96,19 @@ export class Camera {
   record(): CameraRun {
     return {
       requested: this.requested,
-      settings: this.track.getSettings(),
-      capabilities: this.track.getCapabilities?.() ?? {},
+      settings: this.settings,
+      capabilities: this.capabilities,
       load: this.load,
       intervalsMs: this.intervalsMs,
       dropped: this.dropped,
       drawMs: this.drawMs,
       readMs: this.readMs,
     };
+  }
+
+  /** The settings the camera started with. */
+  get started(): MediaTrackSettings {
+    return this.settings;
   }
 
   /** The current frame as a JPEG, to compare its field with a still of the same scene. */

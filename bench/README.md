@@ -31,8 +31,9 @@ uv run python export_bench.py --weights runs/n16/weights/best.pt \
 | Local, with COOP/COEP | `pnpm --filter @detector/bench dev` |
 | Deploy to Cloudflare Pages project `detector-bench` | `bin/deploy-bench.sh` |
 
-The runtime is a URL parameter (`?runtime=webgpu`); changing it reloads the page,
-so only one ORT build is loaded at a time.
+The runtime and the WASM thread count are URL parameters
+(`?runtime=webgpu&threads=4`); changing either reloads the page, because ORT
+reads them once per page.
 
 ## A run
 

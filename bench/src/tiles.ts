@@ -1,3 +1,5 @@
+import { tileOrigins } from '@rails49/detector';
+
 export interface Box {
   x0: number;
   y0: number;
@@ -10,15 +12,13 @@ export interface Tile {
   y: number;
 }
 
-/** Start positions of tiles of `side` covering [`start`, `end`), overlapping by at least `overlap`. */
+/** Tile starts along one axis of [`start`, `end`); a span shorter than a tile gets one centred tile inside [0, `limit`). */
 function positions(start: number, end: number, side: number, overlap: number, limit: number): number[] {
-  const length = end - start;
-  if (length <= side) {
-    const centred = Math.round(start + (length - side) / 2);
+  if (end - start <= side) {
+    const centred = Math.round((start + end - side) / 2);
     return [Math.max(0, Math.min(limit - side, centred))];
   }
-  const count = Math.ceil((length - overlap) / (side - overlap));
-  return Array.from({ length: count }, (_, i) => start + Math.round((i * (length - side)) / (count - 1)));
+  return tileOrigins(end - start, overlap, side).map((x) => start + x);
 }
 
 /** Square tiles of `side` over `area`, row by row, each inside a frame `width` × `height`. */

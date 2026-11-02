@@ -23,6 +23,9 @@ importers:
 
   bench:
     dependencies:
+      '@rails49/detector':
+        specifier: workspace:*
+        version: link:../lib/detector
       lit:
         specifier: ^3.3.1
         version: 3.3.3
@@ -30,6 +33,9 @@ importers:
         specifier: 1.26.0
         version: 1.26.0
     devDependencies:
+      happy-dom:
+        specifier: ^15.11.7
+        version: 15.11.7
       typescript:
         specifier: ^5.4.5
         version: 5.9.3
@@ -38,7 +44,7 @@ importers:
         version: 5.4.21(@types/node@24.13.3)
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@24.13.3)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@24.13.3)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   dataset:
     dependencies:
@@ -78,7 +84,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@24.13.3)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@24.13.3)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   lib/classifier:
     dependencies:
@@ -103,7 +109,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@24.13.3)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@24.13.3)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   lib/config:
     devDependencies:
@@ -118,7 +124,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@24.13.3)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@24.13.3)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   lib/detector:
     dependencies:
@@ -137,7 +143,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@24.13.3)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@24.13.3)(happy-dom@15.11.7)(jsdom@26.1.0)
 
 packages:
 
@@ -1013,6 +1019,10 @@ packages:
     resolution: {integrity: sha512-EjePK1srD3P08o2j4f0ExnylqRs5B9tJjcp9t1krH2qRi8CCdsYfwe9JgSLurFBWwq4uOlipzfk5fHNvwFKr8Q==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
 
+  entities@4.5.0:
+    resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
+    engines: {node: '>=0.12'}
+
   entities@6.0.1:
     resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
     engines: {node: '>=0.12'}
@@ -1054,6 +1064,10 @@ packages:
 
   guid-typescript@1.0.9:
     resolution: {integrity: sha512-Y8T4vYhEfwJOTbouREvG+3XDsjr8E3kIr7uf+JZ0BYloFsttiHU0WfvANVsR7TxNUJa/WpCnw/Ino/p+DeBhBQ==}
+
+  happy-dom@15.11.7:
+    resolution: {integrity: sha512-KyrFvnl+J9US63TEzwoiJOQzZBJY7KgBushJA8X61DMbNsH+2ONkDuLDnCnwUiPTF42tLoEmrPyoqbenVA5zrg==}
+    engines: {node: '>=18.0.0'}
 
   html-encoding-sniffer@4.0.0:
     resolution: {integrity: sha512-Y22oTqIU4uuPgEemfz7NDJz6OeKf12Lsu+QC+s3BVpda64lTiMYCyGwg5ki4vFxkMwQdeZDl2adZoqUgdFuTgQ==}
@@ -1462,6 +1476,10 @@ packages:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
     deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+
+  whatwg-mimetype@3.0.0:
+    resolution: {integrity: sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==}
+    engines: {node: '>=12'}
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -2118,6 +2136,8 @@ snapshots:
 
   diff-sequences@29.6.3: {}
 
+  entities@4.5.0: {}
+
   entities@6.0.1:
     optional: true
 
@@ -2206,6 +2226,12 @@ snapshots:
       resolve-pkg-maps: 1.0.0
 
   guid-typescript@1.0.9: {}
+
+  happy-dom@15.11.7:
+    dependencies:
+      entities: 4.5.0
+      webidl-conversions: 7.0.0
+      whatwg-mimetype: 3.0.0
 
   html-encoding-sniffer@4.0.0:
     dependencies:
@@ -2673,7 +2699,7 @@ snapshots:
       '@types/node': 24.13.3
       fsevents: 2.3.3
 
-  vitest@1.6.1(@types/node@24.13.3)(jsdom@26.1.0):
+  vitest@1.6.1(@types/node@24.13.3)(happy-dom@15.11.7)(jsdom@26.1.0):
     dependencies:
       '@vitest/expect': 1.6.1
       '@vitest/runner': 1.6.1
@@ -2697,6 +2723,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.13.3
+      happy-dom: 15.11.7
       jsdom: 26.1.0
     transitivePeerDependencies:
       - less
@@ -2713,13 +2740,14 @@ snapshots:
       xml-name-validator: 5.0.0
     optional: true
 
-  webidl-conversions@7.0.0:
-    optional: true
+  webidl-conversions@7.0.0: {}
 
   whatwg-encoding@3.1.1:
     dependencies:
       iconv-lite: 0.6.3
     optional: true
+
+  whatwg-mimetype@3.0.0: {}
 
   whatwg-mimetype@4.0.0:
     optional: true

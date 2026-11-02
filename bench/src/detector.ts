@@ -1,3 +1,4 @@
+import { CONFIDENCE_THRESHOLD } from '@rails49/detector';
 import type * as Ort from 'onnxruntime-web';
 import type { DetectorFrame } from './summary.js';
 import { rgbaToChw } from './tensor.js';
@@ -5,12 +6,10 @@ import type { Tile } from './tiles.js';
 
 export type Runtime = 'wasm' | 'webgpu';
 
-/** Score above which an output slot counts as a box (config.yaml detector.confidence_threshold). */
-const CONFIDENCE = 0.25;
-
 /**
  * Each runtime is its own ORT build: `/wasm` loads `ort-wasm-simd-threaded.wasm`,
- * `/webgpu` the asyncify build. The page loads one per visit.
+ * `/webgpu` the asyncify build. The page loads one per visit, because ORT
+ * reads `env` once, when the first session starts.
  *
  * WASM inference runs in ORT's proxy worker. On the main thread it would block
  * the camera callbacks for the whole run. ORT has no proxy for WebGPU.
@@ -57,11 +56,15 @@ export class Detector {
       const outputs = await this.session.run({ [this.session.inputNames[0]]: tensor });
       const t2 = performance.now();
       const slots = outputs[this.session.outputNames[0]].data as Float32Array;
-      for (let i = 4; i < slots.length; i += 7) if (slots[i] > CONFIDENCE) result.boxes++;
+      for (let i = 4; i < slots.length; i += 7) if (slots[i] > CONFIDENCE_THRESHOLD) result.boxes++;
       result.prepMs.push(t1 - t0);
       result.inferMs.push(t2 - t1);
     }
     result.end = performance.now();
     return result;
+  }
+
+  release(): Promise<void> {
+    return this.session.release();
   }
 }

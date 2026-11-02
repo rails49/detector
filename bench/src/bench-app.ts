@@ -1,7 +1,10 @@
+import { tileOverlapPx } from '@rails49/detector';
 import { LitElement, css, html } from 'lit';
 import type { CameraPanel } from './camera-panel.js';
 import './camera-panel.js';
 import { Detector, type Runtime } from './detector.js';
+import { saveBlob } from './download.js';
+import { runUntil } from './run.js';
 import { summaryText, type CameraRun, type DetectorRun } from './summary.js';
 import { tileGrid, type Box } from './tiles.js';
 
@@ -9,7 +12,6 @@ import { tileGrid, type Box } from './tiles.js';
 interface Manifest {
   model: string;
   dpt: number;
-  overlap: number;
   layout: Box;
   frames: { file: string; width: number; height: number }[];
   models: { side: number; precision: string; file: string; bytes: number }[];
@@ -51,7 +53,10 @@ export class BenchApp extends LitElement {
   declare running: boolean;
   declare summary: string;
 
-  private readonly runtime: Runtime = new URLSearchParams(location.search).get('runtime') === 'webgpu' ? 'webgpu' : 'wasm';
+  // ORT reads its runtime and thread count once per page, so both are URL parameters.
+  private readonly params = new URLSearchParams(location.search);
+  private readonly runtime: Runtime = this.params.get('runtime') === 'webgpu' ? 'webgpu' : 'wasm';
+  private readonly threads = Number(this.params.get('threads')) || 0;
   private frames: ImageBitmap[] = [];
   private record?: { run: DetectorRun; camera?: CameraRun };
 
@@ -87,19 +92,19 @@ export class BenchApp extends LitElement {
 
   private get tiles() {
     const m = this.manifest!;
-    return tileGrid(m.layout, this.side, m.overlap, m.frames[0].width, m.frames[0].height);
+    return tileGrid(m.layout, this.side, tileOverlapPx(m.dpt), m.frames[0].width, m.frames[0].height);
   }
 
-  private setRuntime(event: Event): void {
-    const params = new URLSearchParams(location.search);
-    params.set('runtime', (event.target as HTMLSelectElement).value);
-    location.search = params.toString();
+  private reloadWith(name: string) {
+    return (event: Event) => {
+      this.params.set(name, (event.target as HTMLSelectElement).value);
+      location.search = this.params.toString();
+    };
   }
 
   private async start(): Promise<void> {
     const m = this.manifest!;
     const precision = this.value('precision');
-    const threads = Number(this.value('threads'));
     const tiles = this.tiles.slice(0, Number(this.value('tiles')));
     const endAt = performance.now() + Number(this.value('duration')) * 60_000;
     const camera = this.renderRoot.querySelector<CameraPanel>('camera-panel')!.camera;
@@ -107,10 +112,11 @@ export class BenchApp extends LitElement {
     this.running = true;
     this.summary = '';
     const wakeLock = await navigator.wakeLock?.request('screen').catch(() => undefined);
+    let detector: Detector | undefined;
     try {
       this.status = 'loading model';
       const t0 = performance.now();
-      const detector = await Detector.create(this.runtime, `${DATA}${model.file}`, this.side, threads);
+      detector = await Detector.create(this.runtime, `${DATA}${model.file}`, this.side, this.threads);
       const loadMs = performance.now() - t0;
       this.status = 'first frame';
       const warmup = await detector.run(this.frames[0], tiles);
@@ -123,7 +129,7 @@ export class BenchApp extends LitElement {
         model: m.model,
         precision,
         runtime: this.runtime,
-        threads,
+        threads: this.threads,
         side: this.side,
         tiles: tiles.length,
         dpt: m.dpt,
@@ -131,21 +137,23 @@ export class BenchApp extends LitElement {
         warmupMs: warmup.end - warmup.start,
         frames: [],
       };
-      this.record = { run };
       camera?.reset();
-      while (this.running && performance.now() < endAt) {
-        const frame = await detector.run(this.frames[run.frames.length % this.frames.length], tiles);
-        run.frames.push(frame);
+      run.frames = await runUntil(detector, this.frames, tiles, endAt, () => this.running, (frame, count) => {
         const left = Math.max(0, (endAt - performance.now()) / 1000);
-        this.status = `frame ${run.frames.length}: ${(frame.end - frame.start).toFixed(0)} ms, ${frame.boxes} boxes, ${left.toFixed(0)} s left`;
+        this.status = `frame ${count}: ${(frame.end - frame.start).toFixed(0)} ms, ${frame.boxes} boxes, ${left.toFixed(0)} s left`;
+      });
+      if (run.frames.length === 0) {
+        this.status = 'stopped before the first timed frame';
+        return;
       }
-      this.record.camera = camera?.record();
+      this.record = { run, camera: camera?.record() };
       this.summary = summaryText(run, this.record.camera, new Date());
       this.status = 'done';
     } catch (error) {
       this.status = `failed: ${error}`;
     } finally {
       this.running = false;
+      await detector?.release();
       await wakeLock?.release();
     }
   }
@@ -156,12 +164,7 @@ export class BenchApp extends LitElement {
 
   private download(): void {
     const blob = new Blob([JSON.stringify(this.record, null, 1)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `bench-${this.record!.run.runtime}-${Date.now()}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    saveBlob(blob, `bench-${this.record!.run.runtime}-${Date.now()}.json`);
   }
 
   render() {
@@ -181,7 +184,7 @@ export class BenchApp extends LitElement {
         <label>Device <input name="device" placeholder="iPhone 16 Pro Max" ?disabled=${this.running} /></label>
         <label
           >Runtime
-          <select @change=${this.setRuntime} ?disabled=${this.running}>
+          <select @change=${this.reloadWith('runtime')} ?disabled=${this.running}>
             ${(['wasm', 'webgpu'] as const).map((r) => html`<option ?selected=${r === this.runtime}>${r}</option>`)}
           </select></label
         >
@@ -208,8 +211,8 @@ export class BenchApp extends LitElement {
         >
         <label
           >Threads
-          <select name="threads" ?disabled=${this.running}>
-            ${THREADS.map((n) => html`<option value=${n}>${n || 'default'}</option>`)}
+          <select @change=${this.reloadWith('threads')} ?disabled=${this.running}>
+            ${THREADS.map((n) => html`<option value=${n} ?selected=${n === this.threads}>${n || 'default'}</option>`)}
           </select></label
         >
         <label

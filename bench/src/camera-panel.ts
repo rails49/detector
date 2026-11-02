@@ -1,5 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { Camera, type CameraLoad } from './camera.js';
+import { saveBlob } from './download.js';
 
 const SIZES = [
   [3840, 2160],
@@ -49,7 +50,7 @@ export class CameraPanel extends LitElement {
     const [width, height] = this.value('size').split('x').map(Number);
     try {
       this.camera = await Camera.start(this.video, width, height, this.value('load') as CameraLoad);
-      const s = this.camera.record().settings;
+      const s = this.camera.started;
       this.status = `${s.width}×${s.height} at ${s.frameRate} fps`;
     } catch (error) {
       this.status = `failed: ${error}`;
@@ -63,12 +64,7 @@ export class CameraPanel extends LitElement {
   }
 
   private async save(): Promise<void> {
-    const url = URL.createObjectURL(await this.camera!.frameJpeg());
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `video-frame-${Date.now()}.jpg`;
-    link.click();
-    URL.revokeObjectURL(url);
+    saveBlob(await this.camera!.frameJpeg(), `video-frame-${Date.now()}.jpg`);
   }
 
   render() {
