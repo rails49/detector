@@ -4,7 +4,7 @@ Written 2026-11-02. It summarises the accuracy experiments of
 [#37](https://github.com/rails49/detector/issues/37) and [#25](https://github.com/rails49/detector/issues/25)
 and the hardware research of [#31](https://github.com/rails49/detector/issues/31). It ranks
 the YOLO model sizes, the DPT and the hardware as promising, possible or not worth it, and
-asks whether the detector could take over the 10 Hz job planned for the per-spot classifier
+sizes the detector to run slowly beside the 10 Hz per-spot classifier
 ([rails49/occupancy#272](https://github.com/rails49/occupancy/issues/272)).
 
 Evidence tags: **M** measured here, **P** published figure, **E** estimate or arithmetic.
@@ -17,10 +17,11 @@ Evidence tags: **M** measured here, **P** published figure, **E** estimate or ar
 | Model | Start from l or x for accuracy | n and s are as accurate as m and l; l and m fail in INT8 (M) |
 | Compute per refresh, whole 2×1 m layout | l at DPT 33: 14.4 TFLOP, beyond any home hardware | n at DPT 16: 0.14 TFLOP, about 100× less (E) |
 | Hardware | RTX-class PC or nothing | 1.5 Hz fits a phone's or a Mac's neural engine (E) |
-| Rate | 1.5 Hz in stations | 10 Hz in key blocks wanted; latency at most one frame period |
+| Rate | Detector at 1.5 Hz in stations | Classifier at 10 Hz for sensors, detector at 0.3–1.5 Hz for positions and counts |
 
-The open question has moved from "can any home hardware run the detector" to "which
-hardware runs n at DPT 16 at 10 Hz, and is that enough to drop the classifier".
+The question has moved from "can any home hardware run the detector" to "how slow and how
+much of the layout can the detector be, beside a 10 Hz classifier". At 0.3–1.5 Hz every
+native device fits, and the browser fits part of the layout.
 
 ## How far the data goes
 
@@ -80,7 +81,7 @@ chips ([§ Throughput per device](#throughput-per-device)). 1.5 Hz needs 0.21 TF
 | possible | Jetson Orin Nano Super ($399), TensorRT FP16 | Pi HQ or USB camera | 9 Hz (P) |
 | possible | D. Used Snapdragon 8 Elite phone ($540–700), QNN | its own video | 8 Hz (P) |
 | possible | E. Pi 5 + Hailo-8 or Hailo-10H ($295–375), HailoRT | one Pi HQ, DPT 17, 10 fps | 7–14 Hz (E), only if YOLO26-OBB compiles |
-| no | Browser, WASM | 4K video, DPT 16 | 0.4 Hz (M) |
+| possible | Browser, WASM, beside the classifier | 4K video, DPT 16 | 0.4 Hz (M); 1–2 Hz on 2–4 tiles of 1024 px (E) |
 | no | Intel Core Ultra mini PC, Ryzen AI Max, Orin NX, M5 Pro | – | sized for l or DPT 33; buys nothing measurable |
 | no | reCamera | – | dropped in [#54](https://github.com/rails49/detector/issues/54) |
 
@@ -282,49 +283,67 @@ held-out frames already come from one ceiling camera, so the accuracy above incl
   TensorRT INT8 lose the NMS-free head and need rotated NMS on the CPU. E, a Pi 5 with
   Hailo, is the cheapest box but runs nothing until YOLO26-OBB compiles for Hailo, which it
   does not today.
-- **Not worth it.** The browser (WASM is 3.5× too slow for n at DPT 16 even at 1.5 Hz), and
-  every setup sized for l, m or DPT 25–33.
+- **Possible for a slow detector.** The browser: WASM runs n at DPT 16 on the whole layout at
+  0.4 Hz, too slow for stops but enough beside a 10 Hz classifier
+  ([§ Recommended setup](#recommended-setup)).
+- **Not worth it.** Every setup sized for l, m or DPT 25–33.
 
-## 10 Hz, and the detector against the classifier
+## Recommended setup
 
-Rule: latency, capture to L0, is at most one frame period: 100 ms at 10 Hz, 200 ms at 5 Hz.
+Classifier at 10 Hz, detector at 0.3–1.5 Hz.
 
-**Detector, n at DPT 16.** 137 GFLOP per frame, finished inside the period, needs 1.37
-TFLOP/s at 10 Hz and 0.69 at 5 Hz, plus capture and transfer time inside the same budget.
-The published phone, Mac, Jetson and Hailo figures give 3–14 Hz for the whole layout:
-5 Hz fits on most, 10 Hz is at the edge. Only the RTX PC clears 10 Hz with margin. Cropping to strips of
-track would save 2–6× on this layout ([#33](https://github.com/rails49/detector/issues/33))
-and bring 10 Hz into phone range, at the cost of rotated strips, duplicate boxes at
-turnouts and fixed input shapes per layout.
-
-**Classifier** (occupancy#272: 50 sensors, 10 Hz, Safari on the XS Max, 4K video at DPT 16).
-A small CNN on 50 patches of a few thousand pixels is under 1 GFLOP per frame, under
-10 GFLOP/s at 10 Hz (E), within browser WASM. Its accuracy is not measured yet
-([rails49/classifier#4](https://github.com/rails49/classifier/issues/4)).
+The classifier ([rails49/occupancy#272](https://github.com/rails49/occupancy/issues/272):
+50 sensors, 10 Hz, Safari on the XS Max, 4K video at DPT 16) sets sensor state at 10 Hz.
+The detector runs n at DPT 16 on the same frames at 0.3–1.5 Hz, on the whole layout or on
+part of it, for car positions, counts, and the turnouts and crossings the classifier does
+not cover. A sensor is occupied if either model says so.
 
 What each gives that the other does not:
 
 | | Detector | Classifier v1 |
 |---|---|---|
-| Runs in the browser at 10 Hz | no | yes (target) |
 | Car positions, counts, couplings | yes | no |
 | Turnouts and crossings | yes | no, reads unknown |
 | Needs traced centerlines | no | yes |
-| Hardware for 10 Hz | native, phone at the edge, PC certain | the XS Max |
-| Accuracy on this layout | 1–4 misses in 342 cars at DPT 16 (M) | not measured |
+| Compute per frame | 137 GFLOP, whole layout | under 1 GFLOP for 50 patches (E) |
+| Accuracy on this layout | 1–4 misses in 342 cars at DPT 16 (M) | not measured ([rails49/classifier#4](https://github.com/rails49/classifier/issues/4)) |
 
-**Verdict, conditional.**
+Running the detector at 10 Hz instead would need 1.37 TFLOP/s finished inside each 100 ms
+period. On published figures only an RTX PC clears that with margin
+([§ Throughput per device](#throughput-per-device)).
 
-- In the browser only the classifier reaches 10 Hz. The detector does not reach 1.5 Hz there
-  either.
-- On native hardware the detector could replace the classifier if both hold:
-  1. #42 or #43 shows n at DPT 16 well under 100 ms per frame with the camera running,
-     leaving room for capture and transfer inside the 100 ms; and
-  2. its per-sensor false-clear rate, once the classifier's is measured, is no worse.
-- The classifier can never replace the detector: it gives no positions or counts and does
-  not cover turnouts.
-- Until those measurements exist, the plan in occupancy#272 (both run, occupied if either
-  says so) stands.
+### Detector rate and area
+
+Native devices run the whole layout at 2.8–12 Hz on published figures, so every rate from
+0.3 to 1.5 Hz fits on the whole layout with room to spare. No cropping is needed.
+
+In the browser, WASM gives about 0.06 TFLOP/s on the iPhone 16 (M); the classifier takes
+under 0.01 of it (E). Covering part of the layout means smaller tiles: a 1024 px tile covers
+about 0.58 m square at DPT 16 and costs 14.7 GFLOP. The whole layout on two 2048 tiles costs
+137 GFLOP, less than ten 1024 tiles.
+
+| Detector area | GFLOP per frame | Browser rate (E) | Native rate |
+|---|---|---|---|
+| Whole layout, 2 tiles of 2048 | 137 | 0.4 Hz | 2.8–12 Hz |
+| 8 tiles of 1024, about half | 118 | 0.5 Hz | all of 0.3–1.5 Hz |
+| 4 tiles of 1024 | 59 | 1.0 Hz | all of 0.3–1.5 Hz |
+| 2 tiles of 1024, a few turnouts | 29 | 2.0 Hz | all of 0.3–1.5 Hz |
+
+So on one phone in Safari the detector can cover the whole layout at 0.3–0.4 Hz, or a few
+areas at 1–1.5 Hz. WebGPU is not measured and may be faster. The iPhone XS Max is slower
+than the iPhone 16 and is not measured.
+
+### What a slow detector costs
+
+- **Turnouts and crossings.** The classifier reads them as unknown, so there the detector is
+  the only source and its rate is the response time. The areas the detector covers should
+  include them.
+- **Late clearing.** With "occupied if either says so", a detector frame that says occupied
+  holds the sensor until the next frame. With latency at most one period, a sensor can stay
+  occupied up to two periods after the train has left: 6.7 s at 0.3 Hz, 2 s at 1 Hz, 1.3 s at
+  1.5 Hz. It never causes a false clear; the classifier covers that.
+- **Positions and counts lag** by up to two periods. What uses them sets the detector's rate;
+  no number exists for it yet.
 
 ## Suggested follow-ups
 
@@ -332,12 +351,16 @@ Listed only; no issues opened.
 
 1. Correct the INT8 column in #37: it shows the 0.10 row under a 0.25 heading.
 2. Measure n at DPT 16 on two 2048 tiles through Core ML on the iPhone 16 Pro Max and the
-   M2 Max with the camera running, as ms per frame and its spread (#42, #43). This decides
-   the 10 Hz question.
-3. Pick an INT8 threshold per model from a confidence sweep, or keep FP16, which matched
+   M2 Max with the camera running, as ms per frame and its spread (#42, #43).
+3. Measure n at DPT 16 in Safari on the iPhone 16 and the XS Max, WASM and WebGPU, on 1024
+   and 2048 tiles, with the classifier running. This sets how much of the layout the
+   detector covers in the browser.
+4. Decide the detector's rate from what uses positions and counts, and the areas it must
+   cover, including every turnout and crossing.
+5. Pick an INT8 threshold per model from a confidence sweep, or keep FP16, which matched
    FP32 everywhere.
-4. Repeat n and s at DPT 12–16 on a second layout and with more training frames before
+6. Repeat n and s at DPT 12–16 on a second layout and with more training frames before
    lowering `SPEC.md`'s minimum DPT.
-5. Score n at DPT 16 per sensor with the classifier's metric, so the two can be compared
+7. Score n at DPT 16 per sensor with the classifier's metric, so the two can be compared
    directly ([#28](https://github.com/rails49/detector/issues/28)).
-6. Drop m, l and x from further training runs.
+8. Drop m, l and x from further training runs.
