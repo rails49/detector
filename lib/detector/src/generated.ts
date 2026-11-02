@@ -50,6 +50,12 @@ export const DETECTOR_INPUT = [960, 544] as const;
 export const DETECTOR_CANVAS = 2048;
 
 /**
+ * The target DPT: every image is resampled to it before the detector
+ * sees it, in training and at run time. A placeholder until #59.
+ */
+export const DETECTOR_DPT = 16;
+
+/**
  * Overlap between neighbouring tiles, in prototype mm. In pixels it is
  * `DPT * DETECTOR_TILE_OVERLAP_MM / STANDARD_GAUGE`.
  */

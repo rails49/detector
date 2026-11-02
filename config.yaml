@@ -59,6 +59,10 @@ detector:
   # Side of the square every training tile is cut to, in pixels (ADR 0014,
   # rails49/occupancy#128).
   canvas: 2048
+  # The target DPT: every image is resampled to it before the detector sees
+  # it, in training and at run time (ADR 0014). A placeholder, not a decision;
+  # #59 decides it.
+  dpt: 16
   # Overlap between neighbouring tiles, in prototype mm, converted to pixels
   # like car width: DPT * tile_overlap_mm / standard_gauge. Longer than the
   # longest car.
