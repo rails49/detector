@@ -9,6 +9,9 @@ The detector side of [rails49 occupancy](https://github.com/rails49/occupancy): 
 **Native DPT**:
 An image's own DPT, from its archive's calibration, before any resampling.
 
+**Target DPT**:
+The DPT every image is resampled to before the detector sees it, in training and at run time. Configured, not fixed by this project. See [SPEC § Input geometry](SPEC.md#input-geometry-is-dpt-normalized).
+
 **Minimum DPT**:
 The DPT below which a car is too few pixels across for this project's detector to place it reliably. A reader requirement. See [SPEC § Minimum DPT](SPEC.md#minimum-dpt).
 
@@ -42,7 +45,7 @@ A detection where there is no car. See [SPEC § Accuracy](SPEC.md#accuracy).
 A car with no detection. See [SPEC § Accuracy](SPEC.md#accuracy).
 
 **Canvas**:
-The fixed square every detector input is padded onto, at a constant DPT. See [ADR 0014](docs/adr/0014-dpt-normalized-input-padded-never-resized.md).
+The fixed square every input to the detector is padded onto, at the target DPT. See [ADR 0014](docs/adr/0014-dpt-normalized-input-padded-never-resized.md).
 
 **Tile**:
 A canvas-sized piece of a capture larger than the canvas. See [ADR 0014](docs/adr/0014-dpt-normalized-input-padded-never-resized.md).

@@ -43,12 +43,12 @@ Measured in [rails49/occupancy#11](https://github.com/rails49/occupancy/issues/1
 
 ### Input geometry is DPT-normalized
 
-Decided in [ADR 0014](docs/adr/0014-dpt-normalized-input-padded-never-resized.md) ([rails49/occupancy#130](https://github.com/rails49/occupancy/issues/130)). The export side is built ([#25](https://github.com/rails49/detector/issues/25)). The runtime is not: `detect` still letterboxes to `detector.input: [960, 544]`, and [#10](https://github.com/rails49/detector/issues/10) is open.
+Decided in [ADR 0014](docs/adr/0014-dpt-normalized-input-padded-never-resized.md) ([rails49/occupancy#130](https://github.com/rails49/occupancy/issues/130)). The export side ([#25](https://github.com/rails49/detector/issues/25)) and the runtime ([#10](https://github.com/rails49/detector/issues/10)) are built. Both take a frame's layout from one pure function, `inputLayout` in the `@rails49/detector` root: the scale to the target DPT, the resampled size and the tile positions. The runtime scales a frame in both directions and refuses no DPT; training only scales down, and an archive below the DPT it is exported at is fatal.
 
 Requirements:
 
-* One square canvas, authored as a `config.yaml` constant, replaces `detector.input`. Its size is never derived from the corpus.
-* Every image is resampled to a constant DPT and padded onto the canvas, never resized. See [YOLO annotations](#yolo-annotations-for-the-detector).
+* One square canvas, authored as a `config.yaml` constant, is the model's input. Its size is never derived from the corpus.
+* Every image is resampled to the target DPT (`detector.dpt`) and padded onto the canvas, never resized. See [YOLO annotations](#yolo-annotations-for-the-detector).
 * A capture larger than the canvas is tiled into canvas-sized tiles. The overlap between tiles is longer than the longest car. With stride `T − O`, a car of length `L` lies whole inside some tile when `L ≤ O`.
 * Tile detections are joined in full-frame coordinates. Since any covering detection reads occupied, adding boxes can turn clear into occupied but never the reverse. Tiling can add phantoms but cannot cause a false clear.
 * Export stays static at the canvas size. A dynamic export was measured to work through INT8 and `.ort` and is kept as a fallback.
@@ -68,7 +68,7 @@ A car's width in pixels is `DPT × standard_width / standard_gauge` (`carWidthPx
 
 ### The runtime reports detections in the caller's frame
 
-`detect` returns one detection per box the model scores above the confidence threshold (`CONFIDENCE_THRESHOLD`, unless the call passes `minConfidence`), after dropping each box whose IoU with a higher-scoring one exceeds `detector.nms_iou`. That list is L0: every car the model found, one detection each. Each detection has:
+`detect` returns one detection per box the model scores above the confidence threshold (`CONFIDENCE_THRESHOLD`, unless the call passes `minConfidence`), after dropping each box whose IoU with a higher-scoring one exceeds `detector.nms_iou`. It takes the source's own DPT, and the suppression runs over every tile's boxes at once, so a car two overlapping tiles both see is one detection. That list is L0: every car the model found, one detection each. Each detection has:
 
 * `centre`, `length` and `width`, in pixels of the frame the caller passes;
 * `angle`, the long axis's orientation in radians from the +x axis;
@@ -100,8 +100,8 @@ layout:
   min_dpt: 20                 # warns persistently, never blocks
 
 detector:
-  input: [960, 544]           # superseded — see below
-  canvas: 2048                # square tile side, px
+  canvas: 2048                # square tile side, px — the model's input
+  dpt: 16                     # target DPT — a placeholder until #59
   tile_overlap_mm: 30000      # prototype mm, longer than the longest car
   confidence_threshold: 0.25  # placeholder — needs held-out recall
   classes: ["stock"]          # YOLO class index order — append-only
@@ -113,7 +113,7 @@ The vocabulary is what the context menu offers and what a label's `class` must m
 
 > ⚠️ **`classes` is append-only.** A list position *is* a YOLO class index, so reordering or deleting an entry invalidates trained weights while the file still validates. It is the one config edit that can break a model with nothing noticing.
 
-**`detector.input` is superseded** by [rails49/occupancy#130](https://github.com/rails49/occupancy/issues/130) and shown above only because it is what the code still reads. It becomes a **single square canvas side** plus the target DPT — an authored `[w, h]` pair is the wrong *shape* of parameter once image size falls out of layout extent × DPT rather than being chosen. See [Input geometry](#input-geometry-is-dpt-normalized) for why square, why authored rather than derived, and what bounds its value.
+**The input is a canvas side plus the target DPT**, not an authored `[w, h]` pair, which was the wrong *shape* of parameter once image size falls out of layout extent × DPT rather than being chosen ([rails49/occupancy#130](https://github.com/rails49/occupancy/issues/130)). See [Input geometry](#input-geometry-is-dpt-normalized) for why square, why authored rather than derived, and what bounds its value.
 
 The `stock.` root is required rather than cosmetic: a new car is `stock` and refinements must roll up to it, so an unrooted class would match no entry and be dropped from the export — the unlabeled-car-as-background failure [Labeling completeness](https://github.com/rails49/occupancy/blob/main/SPEC.md#labeling-completeness) exists to prevent. The root never appears in the UI; the context menu renders its children.
 
