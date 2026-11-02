@@ -43,10 +43,10 @@ export const SCALES: readonly [Scale, ...Scale[]] = ["G", "O", "S", "HO", "T", "
 
 //── Detector ────────────────────────────────────────────────────────────────
 
-/** Detector input resolution, `[width, height]` in pixels. */
-export const DETECTOR_INPUT = [960, 544] as const;
-
-/** Side of the square training tile, in pixels. */
+/**
+ * Side of the square every tile is cut to, in pixels, in training and
+ * at run time. The model's input is this square.
+ */
 export const DETECTOR_CANVAS = 2048;
 
 /**

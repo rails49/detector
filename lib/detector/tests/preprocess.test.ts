@@ -1,19 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { letterbox } from '../src/letterbox.ts';
-import { PAD_GRAY, paintLetterbox, type LetterboxTarget } from '../src/preprocess.ts';
+import { DETECTOR_CANVAS } from '../src/generated.ts';
+import { PAD_GRAY, paintResampled, paintTile, type PaintTarget } from '../src/preprocess.ts';
 
 /**
- * Painting the input grid, driven by a fake context.
+ * Painting the input, driven by a fake context.
  *
- * What this can pin is that the context is *configured* the way the model was
- * trained — the resampling filter above all (rails49/occupancy#132) — and that the paint happens
- * in the right order at the right place. What it cannot pin is the resulting
- * pixels: no test environment here executes `drawImage` and reads them back
- * (`ui` is jsdom, `lib/*` is bare node, `@web/test-runner` went in rails49/occupancy#109). That
- * gap is open on #7 and no fake closes it.
+ * What this can pin is that the context is *configured* as intended — the
+ * resampling filter above all (rails49/occupancy#132) — and that the paint
+ * happens in the right order at the right place. What it cannot pin is the
+ * resulting pixels: no test environment here executes `drawImage` and reads
+ * them back (`lib/*` is bare node, `@web/test-runner` went in
+ * rails49/occupancy#109). That gap is open on #7 and no fake closes it.
  */
-
-const GRID = { width: 960, height: 544 };
 
 /** One recorded paint operation, with the context state it ran under. */
 interface Op {
@@ -31,14 +29,12 @@ interface Op {
  * bug being guarded is an ordering one: a filter set after the draw is a filter
  * that did nothing.
  */
-class Recorder implements LetterboxTarget {
+class Recorder implements PaintTarget {
   fillStyle: string | CanvasGradient | CanvasPattern = '';
-  // Deliberately *not* the values under test. A fake that starts where the code
-  // is supposed to leave it cannot tell "assigned" from "already there" — and
-  // here that distinction is easy to lose, because `'low'` and `true` are also
-  // the spec's initial values for a real context.
+  // Deliberately *not* the values under test, so "assigned" is told from
+  // "already there".
   imageSmoothingEnabled = false;
-  imageSmoothingQuality: ImageSmoothingQuality = 'high';
+  imageSmoothingQuality: ImageSmoothingQuality = 'low';
   readonly ops: Op[] = [];
 
   fillRect(...args: number[]): void {
@@ -60,80 +56,54 @@ class Recorder implements LetterboxTarget {
   }
 }
 
-/** A stand-in for the picture: `paintLetterbox` only hands it to `drawImage`. */
+/** Stand-ins for the pictures: the painters only hand them to `drawImage`. */
 const SOURCE = {} as CanvasImageSource;
+const RESAMPLED = {} as CanvasImageSource;
 
-const paint = (frame: { width: number; height: number }, ctx = new Recorder()) => {
-  paintLetterbox(ctx, SOURCE, frame, GRID);
-  return ctx;
-};
+describe('the resample', () => {
+  it('requests the high-quality filter, whatever the context arrived holding', () => {
+    const ctx = new Recorder();
+    paintResampled(ctx, SOURCE, { width: 4440, height: 2130 }, { width: 2220, height: 1065 });
 
-describe('the resampling filter', () => {
-  it('is requested explicitly, whatever the context arrived holding', () => {
-    // The bug (rails49/occupancy#132): the filter was never stated, so a context that had been
-    // touched — or a UA whose initial value is not the spec's — resampled the
-    // model's input differently from every other one. rails49/occupancy#112 measured what that
-    // costs: 36% recall bilinear against 31% area-averaged, identical frames
-    // and identical weights.
-    const draw = paint({ width: 1920, height: 1080 }).ops.find((op) => op.name === 'drawImage');
-
-    expect(draw?.smoothingEnabled).toBe(true);
-    expect(draw?.smoothingQuality).toBe('low');
+    expect(ctx.ops).toHaveLength(1);
+    expect(ctx.ops[0].smoothingEnabled).toBe(true);
+    expect(ctx.ops[0].smoothingQuality).toBe('high');
   });
 
-  it('is re-pinned on every call, because sizing a canvas resets the context', () => {
-    // Today's canvas is sized once, so hoisting to the constructor would work —
-    // but the DPT-normalized pipeline (rails49/occupancy#130) makes the grid a thing that
-    // changes, and a filter that silently unpins itself on resize is this same
-    // bug with a longer fuse. A context reset between calls stands in for it.
+  it('re-requests it on every call, because sizing a canvas resets the context', () => {
     const ctx = new Recorder();
-    paint({ width: 1920, height: 1080 }, ctx);
-
+    paintResampled(ctx, SOURCE, { width: 1920, height: 1080 }, { width: 1600, height: 900 });
     ctx.imageSmoothingEnabled = false;
-    ctx.imageSmoothingQuality = 'high';
-    paint({ width: 1920, height: 1080 }, ctx);
+    ctx.imageSmoothingQuality = 'low';
+    paintResampled(ctx, SOURCE, { width: 1920, height: 1080 }, { width: 1600, height: 900 });
 
-    const draws = ctx.ops.filter((op) => op.name === 'drawImage');
-    expect(draws).toHaveLength(2);
-    expect(draws[1].smoothingEnabled).toBe(true);
-    expect(draws[1].smoothingQuality).toBe('low');
+    expect(ctx.ops[1].smoothingEnabled).toBe(true);
+    expect(ctx.ops[1].smoothingQuality).toBe('high');
+  });
+
+  it('draws the whole source at the resampled size, up or down', () => {
+    const ctx = new Recorder();
+    paintResampled(ctx, SOURCE, { width: 1000, height: 600 }, { width: 1600, height: 960 });
+
+    expect(ctx.ops[0].args).toEqual([SOURCE, 0, 0, 1000, 600, 0, 0, 1600, 960]);
   });
 });
 
-describe('the paint', () => {
-  it('lays the trained pad colour down first, then the picture over it', () => {
-    // Order, not just presence: bars painted after the draw would cover the
-    // frame the model is about to read.
-    const ctx = paint({ width: 1920, height: 1080 });
+describe('a tile', () => {
+  it('lays the trained pad colour over the whole canvas first, then the tile over it', () => {
+    const ctx = new Recorder();
+    paintTile(ctx, RESAMPLED, { x: 0, y: 0, width: 1500, height: 750 });
 
     expect(ctx.ops.map((op) => op.name)).toEqual(['fillRect', 'drawImage']);
     expect(ctx.ops[0].fillStyle).toBe(PAD_GRAY);
-    expect(ctx.ops[0].args).toEqual([0, 0, GRID.width, GRID.height]);
+    expect(ctx.ops[0].args).toEqual([0, 0, DETECTOR_CANVAS, DETECTOR_CANVAS]);
   });
 
-  it('draws the whole source into the box `letterbox` computed', () => {
-    const frame = { width: 4440, height: 2130 };
-    const fit = letterbox(frame, GRID);
-    const draw = paint(frame).ops[1];
+  it('copies its pixels 1:1 into the top-left corner, padded right and bottom, never resized', () => {
+    const ctx = new Recorder();
+    paintTile(ctx, RESAMPLED, { x: 952, y: 0, width: DETECTOR_CANVAS, height: 500 });
 
-    expect(draw.args).toEqual([
-      SOURCE,
-      0,
-      0,
-      frame.width,
-      frame.height,
-      fit.padX,
-      fit.padY,
-      fit.drawn.width,
-      fit.drawn.height,
-    ]);
-  });
-
-  it('fills the grid edge to edge when the source shares its aspect', () => {
-    // 960x544 is not 16:9, so the ordinary capture still gets bars — this is
-    // the degenerate case that proves the bars are computed, not assumed.
-    const draw = paint(GRID).ops[1];
-
-    expect(draw.args.slice(5)).toEqual([0, 0, GRID.width, GRID.height]);
+    expect(ctx.ops[1].args).toEqual([RESAMPLED, 952, 0, DETECTOR_CANVAS, 500, 0, 0, DETECTOR_CANVAS, 500]);
+    expect(ctx.ops[1].smoothingEnabled).toBe(false);
   });
 });

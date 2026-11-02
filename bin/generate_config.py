@@ -122,7 +122,6 @@ def render_generated_ts(config: dict, r49: dict) -> str:
     standard_width = require(config, "layout", "standard_width")
     min_dpt = require(config, "layout", "min_dpt")
 
-    detector_input = require(config, "detector", "input")
     canvas = require(config, "detector", "canvas")
     target_dpt = require(config, "detector", "dpt")
     tile_overlap_mm = require(config, "detector", "tile_overlap_mm")
@@ -212,10 +211,10 @@ def render_generated_ts(config: dict, r49: dict) -> str:
         "",
         "//── Detector ────────────────────────────────────────────────────────────────",
         "",
-        doc("Detector input resolution, `[width, height]` in pixels."),
-        f"export const DETECTOR_INPUT = {ts_literal(detector_input)} as const;",
-        "",
-        doc("Side of the square training tile, in pixels."),
+        doc(
+            "Side of the square every tile is cut to, in pixels, in training and",
+            "at run time. The model's input is this square.",
+        ),
         f"export const DETECTOR_CANVAS = {ts_literal(canvas)};",
         "",
         doc(
@@ -311,7 +310,6 @@ def render_index_ts() -> str:
             "// The dataset exporter reads the class list and the split ratio.",
             "// @rails49/detector reads its own copy of generated.ts.",
             "export {",
-            "  DETECTOR_INPUT,",
             "  DETECTOR_CANVAS,",
             "  DETECTOR_DPT,",
             "  DETECTOR_CONFIDENCE_THRESHOLD,",
