@@ -18,6 +18,11 @@ when a `detector.classes` entry names a class the vocabulary does not. It emits 
 Pass --config and --r49-data to read other files than the project's own; the
 tests use that to drive the vocabulary check without editing either.
 
+Pass --base-config to refuse a `detector.classes` that is not the base's list
+with entries appended (ADR 0009: a position is a class index). bin/test.sh
+passes config.yaml as it was at the merge base of HEAD and origin/main. Without
+it, nothing is compared and the output is the same.
+
 Pass --out-dir to write somewhere other than the project root. bin/test.sh uses
 that to regenerate into a temp directory and diff against the committed output,
 so editing config.yaml without regenerating fails the full check rather than
@@ -80,6 +85,26 @@ def is_known_class(cls: str, vocabulary: dict) -> bool:
             return False
         node = child
     return True
+
+
+def check_append_only(
+    base_classes: object, classes: object, source: str, base_source: str
+) -> None:
+    """Fail unless `classes` is `base_classes` with entries appended.
+
+    A list position is a YOLO class index (ADR 0009), so a reorder or a removal
+    invalidates trained weights while every entry still names a known class.
+    """
+    if not isinstance(base_classes, list) or not isinstance(classes, list):
+        fail(f"'detector.classes' must be a list in both {source} and {base_source}")
+    if classes[: len(base_classes)] != base_classes:
+        fail(
+            f"{source}'s 'detector.classes' is {ts_literal(classes)}, which does "
+            f"not start with {base_source}'s {ts_literal(base_classes)}. The list "
+            "is append-only (ADR 0009): a position is a class index, so a reorder "
+            "or a removal invalidates trained weights. Restore the base's entries "
+            "in order, and add new ones at the end."
+        )
 
 
 def ts_literal(value) -> str:
@@ -353,6 +378,11 @@ def main() -> None:
         help=f"The format's data file to read (default: the project's {R49_DATA}).",
     )
     parser.add_argument(
+        "--base-config",
+        help="A config whose 'detector.classes' this one's must start with "
+        "(default: none, nothing is compared).",
+    )
+    parser.add_argument(
         "--out-dir",
         default=project_root,
         help="Root to write generated files under (default: the project root).",
@@ -399,6 +429,21 @@ def main() -> None:
             "config.yaml still carries 'classifier.labels'. It was deleted rather "
             "than corrected — nothing could verify it, and v4 cannot produce the "
             "vocabulary it named. See SPEC.md § Parameters live in config.yaml."
+        )
+
+    if args.base_config is not None:
+        try:
+            with open(args.base_config, "r") as f:
+                base = yaml.safe_load(f)
+        except Exception as e:
+            fail(f"could not read the base config {args.base_config}: {e}")
+        if not isinstance(base, dict):
+            fail(f"the base config {args.base_config} did not parse to a mapping")
+        check_append_only(
+            require(base, "detector", "classes", source=args.base_config),
+            require(config, "detector", "classes", source=args.config),
+            args.config,
+            args.base_config,
         )
 
     out_dir = os.path.abspath(args.out_dir)
