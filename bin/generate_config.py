@@ -187,8 +187,8 @@ def render_generated_ts(config: dict, r49: dict) -> str:
         f"export const STANDARD_WIDTH = {ts_literal(standard_width)};",
         "",
         doc(
-            "Minimum usable DPT. Warns persistently, never blocks — the fixture",
-            "corpus sits below it at DPT 18-19.",
+            "Minimum usable DPT. Warns persistently, never blocks — the first",
+            "corpus sat below it at DPT 18-19.",
         ),
         f"export const MIN_DPT = {ts_literal(min_dpt)};",
         "",

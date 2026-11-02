@@ -34,8 +34,8 @@ HERE = Path(__file__).parent
 REPO = HERE.parent
 
 # The DOTA-pretrained oriented-box checkpoint. Ultralytics fetches it on first
-# use. Fine-tuning from it rather than from scratch is what makes 46 images a
-# sane amount of data to show plumbing with — DOTA is aerial imagery of vehicles
+# use. Fine-tuning from it rather than from scratch is what makes a small dataset
+# a sane amount of data to show plumbing with — DOTA is aerial imagery of vehicles
 # and buildings, which is a closer starting point for top-down rolling stock
 # than random initialization by a wide margin.
 PRETRAINED = "yolo26n-obb.pt"

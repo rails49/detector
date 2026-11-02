@@ -5,10 +5,11 @@ browser. Sibling of `classifier/resnet/`, with its own `uv` environment — **do
 not merge the two**: each locks its own torch against its own framework
 (fastai there, Ultralytics here).
 
-No model has been released. `SPEC.md` § Accuracy: there is no held-out
-protocol and the fixture corpus sits below `layout.min_dpt`, so no number this
-produces is a generalization estimate. When a model is released, the package
-version names it.
+No model has been released. The corpus is
+[`rails49/r49`](https://github.com/rails49/r49)'s `archives/`, which is empty
+for now; the current model trains on ceiling captures kept locally, outside git.
+No number this produces is a generalization estimate (`SPEC.md` § Accuracy).
+When a model is released, the package version names it.
 
 ## The path
 
@@ -16,6 +17,8 @@ version names it.
 # 0. the corpus, and the dataset derived from it
 git clone https://github.com/rails49/r49.git ../dataset/r49
 pnpm --filter dataset run export:yolo
+#    r49's archives/ is empty for now: add `-- --in <dir>` for any directory of
+#    .r49 files, relative to dataset/
 
 # 1. fine-tune from the DOTA-pretrained OBB checkpoint
 uv run python train.py --epochs 20

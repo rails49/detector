@@ -45,7 +45,7 @@ layout:
   # never stored.
   standard_width: 3000.0
   # Below this a car is too few pixels across to localize reliably. Warns
-  # persistently, never blocks — the fixture corpus lives at DPT 18-19. Under
+  # persistently, never blocks — the first corpus sat at DPT 18-19. Under
   # `layout` and not `classifier` because it gates the editor.
   min_dpt: 20
 

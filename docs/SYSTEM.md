@@ -38,9 +38,10 @@ detector path runs, and the classifier path is parked at its first arrow.
 ```
 
 The archives live in [`rails49/r49`](https://github.com/rails49/r49), not here
-(rails49/occupancy#63). Its `fixtures/` tree holds six archives, 46 images with
-calibration and no labels, below `layout.min_dpt`. They exercise the code and
-are not training data.
+(rails49/occupancy#63). Its `archives/<handle>/<slug>.r49` tree is the corpus for
+training and testing, and is empty for now. The archives used today are ceiling
+captures in a local folder outside git (rails49/r49#51). `--in` takes any directory of `.r49`
+files.
 
 `dataset/README.md` covers the export and its gates. `detector/README.md`
 covers training and export.

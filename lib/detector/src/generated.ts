@@ -21,8 +21,8 @@ export const STANDARD_GAUGE = 1435.0;
 export const STANDARD_WIDTH = 3000.0;
 
 /**
- * Minimum usable DPT. Warns persistently, never blocks — the fixture
- * corpus sits below it at DPT 18-19.
+ * Minimum usable DPT. Warns persistently, never blocks — the first
+ * corpus sat below it at DPT 18-19.
  */
 export const MIN_DPT = 20;
 
