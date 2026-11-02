@@ -25,11 +25,8 @@ files.
 Every image is resampled to the target DPT, `detector.dpt`; `--dpt <n>`
 resamples to DPT `n` instead. An archive whose native DPT is below it is fatal:
 training never upsamples.
-Each image is decoded to raw pixels first and then resized with sharp's
-default, Lanczos3 (`src/yolo_pixels.ts`), so libjpeg never takes part of a
-large reduction while decoding. `detect` resamples with `resample` from
-`@rails49/detector`, which reproduces that resize; `tests/resample.test.ts`
-compares the two.
+Each image is decoded to raw pixels before it is resized, so `detect` can
+match the resize (`docs/SYSTEM.md` § The pipeline).
 
 ```
 yolo/
