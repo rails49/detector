@@ -4,6 +4,7 @@ import process from 'node:process';
 import sharp from 'sharp';
 import { DETECTOR_CANVAS, DETECTOR_CLASSES, DETECTOR_DPT, DETECTOR_VAL_SPLIT } from '@detector/config';
 import { R49Archive } from '@rails49/r49';
+import { decodeResampled } from './yolo_pixels.ts';
 import { planArchive, type ImageDecoder, type Span, type Split, type TilePlan } from './yolo_rules.ts';
 
 /**
@@ -23,8 +24,9 @@ import { planArchive, type ImageDecoder, type Span, type Split, type TilePlan } 
  * without recomputing the tiling.
  *
  * See SPEC.md § YOLO annotations. What goes where, and what is fatal, is
- * decided by `planArchive` in `yolo_rules.ts`; this script walks directories,
- * decodes images with `sharp`, writes what it is handed, and reports.
+ * decided by `planArchive` in `yolo_rules.ts`, and how an image is decoded and
+ * resampled by `decodeResampled` in `yolo_pixels.ts`; this script walks
+ * directories, writes what it is handed, and reports.
  */
 
 const USAGE = `Usage: pnpm --filter dataset run export:yolo -- [--in <dir>] [--out <dir>] [--dpt <n>]
@@ -182,12 +184,9 @@ async function exportArchive(
 
     // Decoded once to raw pixels at the target size; each tile is cut from that.
     const bytes = (await archive.getImage(image.filename))!;
-    const { data, info } = await sharp(Buffer.from(bytes))
-      .resize(image.size.width, image.size.height)
-      .removeAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    const raw = { width: info.width, height: info.height, channels: info.channels };
+    const resampled = await decodeResampled(bytes, image.size);
+    const data = resampled.data;
+    const raw = { width: resampled.width, height: resampled.height, channels: 3 as const };
 
     for (const tile of image.tiles) {
       const { width, height } = tile;
