@@ -348,11 +348,6 @@ def render_index_ts() -> str:
             "// and the scales above. The editor reads that file directly.",
             "export { VOCABULARY } from './generated.ts';",
             "",
-            "// Withheld: everything under `classifier` and `cnn` in config.yaml. The",
-            "// classifier reads its own config.json at runtime and the CNN training",
-            "// hyperparameters are Python's; neither needs a TypeScript binding, and",
-            "// exporting them would invite a second consumer for values that have one.",
-            "",
         ]
     )
 
@@ -423,13 +418,6 @@ def main() -> None:
 
     if not isinstance(r49, dict):
         fail(f"{R49_DATA} did not parse to an object")
-
-    if "labels" in config.get("classifier", {}):
-        fail(
-            "config.yaml still carries 'classifier.labels'. It was deleted rather "
-            "than corrected — nothing could verify it, and v4 cannot produce the "
-            "vocabulary it named. See SPEC.md § Parameters live in config.yaml."
-        )
 
     if args.base_config is not None:
         try:
