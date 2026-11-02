@@ -6,7 +6,8 @@ import { DETECTOR_CANVAS } from './generated.ts';
 import { decodeDetections, type TileOutput } from './decode.ts';
 import { assertCanvasInput } from './inputShape.ts';
 import { tileToReport } from './report.ts';
-import { paintResampled, paintTile } from './preprocess.ts';
+import { paintFrame, tileInput } from './preprocess.ts';
+import { resample } from './resample.ts';
 import { CONFIDENCE_THRESHOLD } from './thresholds.ts';
 import { inputLayout } from './tiles.ts';
 import type { Detection, Frame } from './types.ts';
@@ -19,9 +20,11 @@ export interface Detector {
    * Every car the model finds in one picture (L0), in the frame named by
    * `report`.
    *
-   * The picture is resampled to the target DPT (`DETECTOR_DPT`), down or up —
-   * no DPT is refused — and cut into canvas tiles at `inputLayout`'s
-   * positions, each padded on the right and bottom as training pads them. The
+   * The picture is copied unscaled, resampled to the target DPT
+   * (`DETECTOR_DPT`) by `resample`, down or up — no DPT is refused — and cut
+   * into canvas tiles at `inputLayout`'s positions, each padded on the right
+   * and bottom as training pads them. Down, the resample is the export's own
+   * filter, the same on every user agent (#7). The
    * model runs once per tile, and a car that two overlapping tiles both see
    * comes back once.
    *
@@ -116,32 +119,23 @@ function firstInputShape(session: ort.InferenceSession): readonly (number | stri
 
 class BrowserDetector implements Detector {
   readonly #session: ort.InferenceSession;
-  // The frame resampled to the target DPT. Resized only when the resampled
-  // size changes, since sizing a canvas reallocates it.
-  readonly #resampled: HTMLCanvasElement;
-  readonly #resampledCtx: CanvasRenderingContext2D;
-  // The one tile the model reads, canvas-square. One for the life of the
-  // session: `detect` runs per video frame, and allocating a backing store
-  // each time is the kind of garbage a live view notices.
-  readonly #input: CanvasRenderingContext2D;
+  // The frame at its own size, copied unscaled to read its pixels back.
+  // Resized only when the source's size changes, since sizing a canvas
+  // reallocates it.
+  readonly #frame: HTMLCanvasElement;
+  readonly #frameCtx: CanvasRenderingContext2D;
   // The input tensor's storage, reused across tiles: each run is awaited
-  // before the next tile overwrites it.
+  // before the next tile overwrites it, and allocating per video frame is the
+  // kind of garbage a live view notices.
   readonly #planar = new Float32Array(3 * DETECTOR_CANVAS * DETECTOR_CANVAS);
 
   constructor(session: ort.InferenceSession) {
     this.#session = session;
 
-    this.#resampled = document.createElement('canvas');
-    const resampledCtx = this.#resampled.getContext('2d');
-    if (!resampledCtx) throw new Error('failed to create the detector 2D context');
-    this.#resampledCtx = resampledCtx;
-
-    const input = document.createElement('canvas');
-    input.width = DETECTOR_CANVAS;
-    input.height = DETECTOR_CANVAS;
-    const inputCtx = input.getContext('2d', { willReadFrequently: true });
-    if (!inputCtx) throw new Error('failed to create the detector 2D context');
-    this.#input = inputCtx;
+    this.#frame = document.createElement('canvas');
+    const frameCtx = this.#frame.getContext('2d', { willReadFrequently: true });
+    if (!frameCtx) throw new Error('failed to create the detector 2D context');
+    this.#frameCtx = frameCtx;
   }
 
   async detect(
@@ -155,16 +149,19 @@ class BrowserDetector implements Detector {
     const frame = sourceFrame(source);
     const layout = inputLayout(frame, dpt);
 
-    if (this.#resampled.width !== layout.size.width || this.#resampled.height !== layout.size.height) {
-      this.#resampled.width = layout.size.width;
-      this.#resampled.height = layout.size.height;
+    if (this.#frame.width !== frame.width || this.#frame.height !== frame.height) {
+      this.#frame.width = frame.width;
+      this.#frame.height = frame.height;
     }
-    paintResampled(this.#resampledCtx, source, frame, layout.size);
+    paintFrame(this.#frameCtx, source);
+    const pixels = this.#frameCtx.getImageData(0, 0, frame.width, frame.height);
+    const resampled = resample(pixels, layout.size);
 
     const outputs: TileOutput[] = [];
     for (const tile of layout.tiles) {
-      paintTile(this.#input, this.#resampled, tile);
-      const feeds = { [this.#session.inputNames[0]]: this.#toTensor() };
+      tileInput(resampled, tile, this.#planar);
+      const tensor = new ort.Tensor('float32', this.#planar, [1, 3, DETECTOR_CANVAS, DETECTOR_CANVAS]);
+      const feeds = { [this.#session.inputNames[0]]: tensor };
       const results = await this.#session.run(feeds);
       const output = results[this.#session.outputNames[0]];
       outputs.push({
@@ -175,26 +172,6 @@ class BrowserDetector implements Detector {
     }
 
     return decodeDetections(outputs, options?.minConfidence ?? CONFIDENCE_THRESHOLD);
-  }
-
-  /**
-   * The input canvas as the network's input: RGB, planar, scaled to `0…1`.
-   *
-   * No mean/std normalization — Ultralytics bakes that into the graph, and
-   * `export_onnx.py`'s calibration reader feeds it the same plain division.
-   */
-  #toTensor(): ort.Tensor {
-    const { data } = this.#input.getImageData(0, 0, DETECTOR_CANVAS, DETECTOR_CANVAS);
-    const area = DETECTOR_CANVAS * DETECTOR_CANVAS;
-    const planar = this.#planar;
-
-    for (let i = 0; i < area; i++) {
-      planar[i] = data[i * 4] / 255;
-      planar[i + area] = data[i * 4 + 1] / 255;
-      planar[i + 2 * area] = data[i * 4 + 2] / 255;
-    }
-
-    return new ort.Tensor('float32', planar, [1, 3, DETECTOR_CANVAS, DETECTOR_CANVAS]);
   }
 
   async dispose(): Promise<void> {
