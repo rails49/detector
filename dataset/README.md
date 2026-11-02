@@ -12,7 +12,7 @@ Derives the Ultralytics OBB layout directly from a directory of archives, with
 no intermediate database:
 
 ```bash
-pnpm --filter dataset run export:yolo -- --in ../../r49/fixtures --out yolo
+pnpm --filter dataset run export:yolo -- --in r49 --out yolo
 ```
 
 `--in` defaults to `r49` and is scanned recursively; `--out` defaults to `yolo`
@@ -20,6 +20,8 @@ and is **replaced wholesale** on every run (it refuses to delete a directory
 that holds no `data.yaml`, so a mistyped `--out` cannot eat your home
 directory). Both are gitignored. Point `--in` at a checkout of
 [`rails49/r49`](https://github.com/rails49/r49); the labels live there, not here.
+Its `archives/` is empty for now, and `--in` takes any directory of `.r49`
+files.
 
 `--dpt <n>` resamples every image to DPT `n`. Without it each image keeps its
 native DPT.
@@ -101,12 +103,14 @@ does not yet exist (`SPEC.md` § Accuracy).
 
 ## Directory Structure
 
-There are no `.r49` archives here any more (rails49/occupancy#63). The corpus is
+There are no `.r49` archives here any more (rails49/occupancy#63). The corpus,
+for training and testing, is the `archives/<handle>/<slug>.r49` tree of
 [`rails49/r49`](https://github.com/rails49/r49), which takes submissions by pull
-request under CC BY 4.0. The six this directory used to hold are in that repo's
-`fixtures/` tree — **fixtures, not training data**, sitting below
-`layout.min_dpt`, so no number derived from them predicts model accuracy.
-Training reads the corpus from a local checkout of it, passed as `--in`.
+request under CC BY 4.0. That tree is empty for now. The archives used today
+are ceiling captures in a local folder outside git; they move to r49 once the
+format questions are settled (rails49/r49#51). No number derived from them
+predicts model accuracy (`SPEC.md` § Accuracy). Training reads archives from a
+local directory passed as `--in`.
 
 *   `yolo/`: The generated detector dataset (gitignored; `export:yolo` writes
     it). `data.yaml` names an absolute path, so it is machine-specific by

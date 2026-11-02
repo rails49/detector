@@ -82,8 +82,9 @@ function fail(message: string): never {
 /**
  * Every `.r49` under `dir`, in sorted order so a run is reproducible.
  *
- * Recursive because the corpus keeps its archives one level down, in
- * `fixtures/` — pointing `--in` at a checkout root has to work.
+ * Recursive because r49 keeps its archives two levels down, in
+ * `archives/<handle>/<slug>.r49` — pointing `--in` at a checkout root has to
+ * work.
  *
  * `Dirent.parentPath` carries the containing directory, and was named `path`
  * before Node 20.12. @types/node no longer declares the old name, but the
