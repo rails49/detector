@@ -2,9 +2,10 @@
 
 Three conversions, each of which can fail in a way the next stage would hide:
 
-1. **ONNX export at `detector.input`.** The rectangular 960x544 shape is applied
-   here, not during training — this is the graph that gets deployed. `nms=False`
-   yields the `end2end` head's fixed 300-slot buffer, selected by `TopK`.
+1. **ONNX export at `detector.canvas`.** A static `[1, 3, canvas, canvas]`
+   input, the square tile training uses and `detect` feeds it (ADR 0014); the
+   export checks the graph it wrote has that input. `nms=False` yields the
+   `end2end` head's fixed 300-slot buffer, selected by `TopK`.
 
    ⚠️ **`TopK` selects; it does not suppress.** This file used to claim the head
    deduplicated in-graph, and that the browser therefore needed no NMS. Measured
@@ -25,14 +26,13 @@ All three were verified end-to-end on the released DOTA weights during the
 feasibility research (rails49/occupancy#3); this script is that path, run on trained
 weights instead. Expect ~3.3 MiB out.
 
-With `--canvas`, the export and calibration use the square `detector.canvas`
-tiles training uses instead of `detector.input`, and the script stops after the
-INT8 ONNX file, which `evaluate.py` scores. `--data` names the dataset root whose
-training tiles calibrate, at the model's DPT.
+With `--onnx-only` the script stops after the INT8 ONNX file, which
+`evaluate.py` scores. `--data` names the dataset root whose training tiles
+calibrate, at the model's DPT.
 
 Usage:
     uv run python export_onnx.py [--weights runs/tracer/weights/best.pt]
-    uv run python export_onnx.py --weights runs/both-l/weights/best.pt --canvas \\
+    uv run python export_onnx.py --weights runs/both-l/weights/best.pt --onnx-only \\
         --out runs/both-l/int8
 """
 
@@ -58,8 +58,6 @@ from onnxruntime.quantization import (
 from PIL import Image
 from ultralytics import YOLO
 
-from letterbox import letterboxed
-
 HERE = Path(__file__).parent
 REPO = HERE.parent
 
@@ -68,15 +66,31 @@ def _detector_config() -> dict:
     return yaml.safe_load((REPO / "config.yaml").read_text())["detector"]
 
 
-def detector_input() -> tuple[int, int]:
-    """`detector.input` from config.yaml, as `(width, height)`."""
-    width, height = _detector_config()["input"]
-    return int(width), int(height)
-
-
 def detector_canvas() -> int:
-    """`detector.canvas` from config.yaml, the side of every training tile."""
+    """`detector.canvas` from config.yaml, the side of every tile."""
     return int(_detector_config()["canvas"])
+
+
+def input_shape() -> tuple[int, int, int, int]:
+    """The exported graph's input, NCHW: one RGB tile at the canvas square.
+
+    `loadDetector` refuses any other, so this is checked on the written graph
+    rather than trusted to Ultralytics' `imgsz`.
+    """
+    canvas = detector_canvas()
+    return (1, 3, canvas, canvas)
+
+
+def check_input_shape(model: Path) -> None:
+    """Fail unless the ONNX graph at `model` takes exactly `input_shape()`."""
+    graph_input = onnx.load(str(model)).graph.input[0]
+    dims = graph_input.type.tensor_type.shape.dim
+    shape = tuple(d.dim_value if d.HasField("dim_value") else d.dim_param for d in dims)
+    if shape != input_shape():
+        raise SystemExit(
+            f"{model.name}: input {graph_input.name} is {list(shape)}, but "
+            f"detector.canvas needs {list(input_shape())}. The browser refuses it."
+        )
 
 
 def copy_metadata(source: Path, target: Path) -> None:
@@ -102,23 +116,26 @@ class FrameCalibrationReader(CalibrationDataReader):
     nothing to reuse.
     """
 
-    def __init__(
-        self, images: list[Path], width: int, height: int, input_name: str
-    ) -> None:
+    def __init__(self, images: list[Path], canvas: int, input_name: str) -> None:
         self._input_name = input_name
         self._batches = iter(
-            [{input_name: self._preprocess(path, width, height)} for path in images]
+            [{input_name: self._preprocess(path, canvas)} for path in images]
         )
 
     @staticmethod
-    def _preprocess(path: Path, width: int, height: int) -> np.ndarray:
-        # Letterbox, matching `loadDetector`'s browser path exactly — the
-        # quantizer fixes its activation ranges on whatever geometry it is shown,
-        # so a frame preprocessed differently from the deployed one calibrates the
-        # model for a distribution it will never be given. Worth 2 px per edge on
-        # today's 1920x1080 corpus; worth 42 px bars at the intended capture
-        # geometry (~4440x2130, aspect 2.08:1). See rails49/occupancy#100.
-        image = letterboxed(Image.open(path).convert("RGB"), (width, height))
+    def _preprocess(path: Path, canvas: int) -> np.ndarray:
+        # Used as exported: each training tile is already the canvas square,
+        # padded on the right and bottom — exactly what `detect` feeds the
+        # model. The quantizer fixes its activation ranges on whatever geometry
+        # it is shown, so anything else would calibrate for a distribution the
+        # model is never given.
+        image = Image.open(path).convert("RGB")
+        if image.size != (canvas, canvas):
+            raise SystemExit(
+                f"{path} is {image.size[0]}x{image.size[1]}, not the "
+                f"{canvas}x{canvas} canvas. Re-export the dataset: "
+                f"pnpm --filter dataset run export:yolo"
+            )
         array = np.asarray(image, dtype=np.float32) / 255.0
         return np.transpose(array, (2, 0, 1))[np.newaxis, ...]
 
@@ -157,9 +174,9 @@ def main() -> None:
         help="Ten sufficed in the rails49/occupancy#3 research; more costs quantization time for little gain.",
     )
     parser.add_argument(
-        "--canvas",
+        "--onnx-only",
         action="store_true",
-        help="Export at detector.canvas, the tile size training uses.",
+        help="Stop after the INT8 ONNX file, which evaluate.py scores.",
     )
     parser.add_argument(
         "--data",
@@ -169,10 +186,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.canvas:
-        width = height = detector_canvas()
-    else:
-        width, height = detector_input()
+    _, _, height, width = input_shape()
 
     if not args.weights.exists():
         raise SystemExit(
@@ -196,6 +210,7 @@ def main() -> None:
     )
     fp32 = args.out / "detector.onnx"
     shutil.move(str(exported), fp32)
+    check_input_shape(fp32)
     print(f"   {fp32.name}  {fp32.stat().st_size / 1024 / 1024:.2f} MiB")
 
     # 2. Static INT8.
@@ -211,9 +226,7 @@ def main() -> None:
     quantize_static(
         model_input=str(fp32),
         model_output=str(int8),
-        calibration_data_reader=FrameCalibrationReader(
-            frames, width, height, input_name
-        ),
+        calibration_data_reader=FrameCalibrationReader(frames, width, input_name),
         quant_format=QuantFormat.QDQ,
         activation_type=QuantType.QInt8,
         weight_type=QuantType.QInt8,
@@ -222,7 +235,7 @@ def main() -> None:
         # graph produces a model that loads, runs, and returns the right shape
         # with **every score zero**.
         #
-        # The head's last `Concat` fuses box coordinates (0..960) with scores
+        # The head's last `Concat` fuses box coordinates (0..canvas) with scores
         # (0..1) into one output tensor. One activation scale has to cover both,
         # it gets sized for the coordinates, and the entire score range collapses
         # into the zero bucket. Nothing errors: you get 300 detections at
@@ -237,7 +250,7 @@ def main() -> None:
     )
     copy_metadata(fp32, int8)
     print(f"   {int8.name}  {int8.stat().st_size / 1024 / 1024:.2f} MiB")
-    if args.canvas:
+    if args.onnx_only:
         return
 
     # 3. .ort — the format onnxruntime-web loads.
@@ -273,7 +286,7 @@ def main() -> None:
     # this pipeline has already hit once.
     print("→ verifying")
     threshold = confidence_threshold()
-    batch = [FrameCalibrationReader._preprocess(path, width, height) for path in frames]
+    batch = [FrameCalibrationReader._preprocess(path, width) for path in frames]
 
     def detections(model: Path) -> int:
         """Detections above the confidence threshold across every probe frame."""
@@ -287,7 +300,7 @@ def main() -> None:
 
             # [1, 300, 7] is YOLO26's end2end head: 300 candidate slots, each
             # (cx, cy, w, h, score, class, angle). Its survival through a
-            # *rectangular* export is not a given, so it is asserted rather than
+            # square export at the canvas is not a given, so it is asserted rather than
             # assumed — but note what it does NOT buy: the slots are selected,
             # not deduplicated, and the browser suppresses duplicates itself
             # (rails49/occupancy#107). This count is therefore boxes, not vehicles.

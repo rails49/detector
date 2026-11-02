@@ -1,7 +1,19 @@
 import onnx
+import pytest
+import yaml
 from onnx import TensorProto, helper
+from PIL import Image
 
-from export_onnx import calibration_images, copy_metadata
+from export_onnx import (
+    REPO,
+    FrameCalibrationReader,
+    calibration_images,
+    check_input_shape,
+    copy_metadata,
+    input_shape,
+)
+
+CANVAS = yaml.safe_load((REPO / "config.yaml").read_text())["detector"]["canvas"]
 
 
 def training_split(root, names):
@@ -36,3 +48,44 @@ def test_copy_metadata(tmp_path):
     copy_metadata(source, target)
     props = onnx.load(str(target)).metadata_props
     assert [(p.key, p.value) for p in props] == [("task", "obb")]
+
+
+def test_the_export_input_is_one_tile_at_the_canvas_square():
+    assert input_shape() == (1, 3, CANVAS, CANVAS)
+
+
+def graph_with_input(path, shape):
+    x = helper.make_tensor_value_info("images", TensorProto.FLOAT, shape)
+    y = helper.make_tensor_value_info("y", TensorProto.FLOAT, shape)
+    graph = helper.make_graph(
+        [helper.make_node("Identity", ["images"], ["y"])], "g", [x], [y]
+    )
+    onnx.save(helper.make_model(graph), str(path))
+    return path
+
+
+def test_check_input_shape_accepts_the_canvas_square(tmp_path):
+    check_input_shape(graph_with_input(tmp_path / "m.onnx", [1, 3, CANVAS, CANVAS]))
+
+
+@pytest.mark.parametrize(
+    "shape", [[1, 3, 544, 960], [1, 3, "height", "width"], [1, 3, CANVAS, 1024]]
+)
+def test_check_input_shape_refuses_any_other(tmp_path, shape):
+    with pytest.raises(SystemExit, match="detector.canvas"):
+        check_input_shape(graph_with_input(tmp_path / "m.onnx", shape))
+
+
+def test_calibration_takes_canvas_tiles_as_exported(tmp_path):
+    tile = tmp_path / "tile.png"
+    Image.new("RGB", (8, 8), (114, 114, 114)).save(tile)
+    batch = FrameCalibrationReader._preprocess(tile, 8)
+    assert batch.shape == (1, 3, 8, 8)
+    assert abs(float(batch.max()) - 114 / 255) < 1e-6
+
+
+def test_calibration_refuses_a_tile_that_is_not_the_canvas(tmp_path):
+    tile = tmp_path / "tile.png"
+    Image.new("RGB", (8, 4)).save(tile)
+    with pytest.raises(SystemExit, match="canvas"):
+        FrameCalibrationReader._preprocess(tile, 8)
