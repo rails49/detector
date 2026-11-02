@@ -53,7 +53,7 @@ BANNER = """// GENERATED FILE — DO NOT EDIT.
 
 
 def fail(message: str) -> NoReturn:
-    print(f"❌ {message}")
+    print(f"❌ {message}", file=sys.stderr)
     sys.exit(1)
 
 
