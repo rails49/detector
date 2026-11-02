@@ -40,8 +40,3 @@ export {
 // The authoring taxonomy, read from @rails49/r49's data file like the gauge
 // and the scales above. The editor reads that file directly.
 export { VOCABULARY } from './generated.ts';
-
-// Withheld: everything under `classifier` and `cnn` in config.yaml. The
-// classifier reads its own config.json at runtime and the CNN training
-// hyperparameters are Python's; neither needs a TypeScript binding, and
-// exporting them would invite a second consumer for values that have one.
