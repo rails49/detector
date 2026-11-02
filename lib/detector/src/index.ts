@@ -3,7 +3,7 @@
 // This file is the package's interface — the only surface consumers may rely
 // on. Anything not exported here is internal and may change without notice.
 // Per-symbol documentation lives on the declarations in ./types.ts,
-// ./geometry.ts, ./tiles.ts, ./classIndex.ts, ./overlap.ts, ./thresholds.ts and ./model.ts, because TypeScript discards doc comments
+// ./geometry.ts, ./tiles.ts, ./resample.ts, ./classIndex.ts, ./overlap.ts, ./thresholds.ts and ./model.ts, because TypeScript discards doc comments
 // written on re-export statements.
 //
 // The name undersells it. This root entry point is really the **car box**
@@ -39,6 +39,14 @@ export { boxCorners, carWidthPx, spanCorners, spanToPolygon } from './geometry.t
 // the two cannot disagree on a tile position (ADR 0014).
 export { inputLayout, tileOrigins, tileOverlapPx } from './tiles.ts';
 export type { InputLayout, Tile } from './tiles.ts';
+
+//── Resample ─────────────────────────────────────────────────────────────────
+// The resample to the target DPT, in our own code rather than the 2D canvas's,
+// whose filter is a hint each user agent implements as it likes (#7). It
+// reproduces the export's sharp resize, so training and `detect` see the same
+// pixels; pure, so node tests compare it with sharp itself.
+export { resample } from './resample.ts';
+export type { Pixels } from './resample.ts';
 
 //── Class index ──────────────────────────────────────────────────────────────
 // The YOLO class a stored `class` trains as. The class list is this project's
