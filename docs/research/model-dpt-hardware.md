@@ -68,20 +68,21 @@ n's misses turn out too high on a larger corpus: 2–3 misses, 3.6–3.8× n's c
 
 ### Hardware for n at DPT 16
 
-Sustained throughput needed for the whole 2×1 m layout: 0.21 / 0.69 / 1.37 TFLOP/s at
-1.5 / 5 / 10 Hz (E, [§ Compute](#compute)).
+Maximum update rate for the whole 2×1 m layout, from published benchmarks of similar
+chips ([§ Throughput per device](#throughput-per-device)). 1.5 Hz needs 0.21 TFLOP/s, 5 Hz
+0.69 and 10 Hz 1.37.
 
-| Tier | Setup | Camera, DPT | 1.5 Hz | 5 Hz | 10 Hz |
-|---|---|---|---|---|---|
-| promising | A. iPhone 16 Pro Max, native Core ML (owned) | its own 4K video, DPT 16 | yes (E) | likely (E) | unknown, [#42](https://github.com/rails49/detector/issues/42) |
-| promising | B. Mac mini M6 ($899), Core ML; M2 Max owned as stand-in | 4K USB camera, DPT 14 | yes (E) | likely (E) | unknown, [#43](https://github.com/rails49/detector/issues/43) |
-| possible | C. PC with RTX 5060 (~$450 card plus host), TensorRT | USB3 camera | yes | yes | yes, wide margin (E) |
-| possible | Jetson Orin Nano Super ($399), TensorRT FP16 | Pi HQ or USB camera | yes | yes (P) | borderline (P) |
-| possible | D. Used Snapdragon 8 Elite phone ($540–700), QNN | its own video | yes | yes (P) | borderline (P) |
-| possible | E. Pi 5 + Hailo-8 or Hailo-10H ($295–375), HailoRT | one Pi HQ, DPT 17, 10 fps | only if YOLO26-OBB compiles | same | same |
-| no | Browser, WASM | 4K video, DPT 16 | no: 0.06 TFLOP/s (M), 3.5× short | no | no |
-| no | Intel Core Ultra mini PC, Ryzen AI Max, Orin NX, M5 Pro | – | sized for l or DPT 33; buys nothing measurable | | |
-| no | reCamera | – | dropped in [#54](https://github.com/rails49/detector/issues/54) | | |
+| Tier | Setup | Camera, DPT | Max rate, n at DPT 16 |
+|---|---|---|---|
+| promising | A. iPhone 16 Pro Max, native Core ML (owned) | its own 4K video, DPT 16 | 4–11 Hz on iPhone 17 Pro figures (P); measure in [#42](https://github.com/rails49/detector/issues/42) |
+| promising | B. Mac mini M6 ($899); M2 Max owned as stand-in | 4K USB camera, DPT 14 | 3–10 Hz on M4 figures, Core ML to Core AI (P); measure in [#43](https://github.com/rails49/detector/issues/43) |
+| possible | C. PC with RTX 5060 (~$450 card plus host), TensorRT | USB3 camera | well above 10 Hz; l alone would run 8–13 Hz (E) |
+| possible | Jetson Orin Nano Super ($399), TensorRT FP16 | Pi HQ or USB camera | 9 Hz (P) |
+| possible | D. Used Snapdragon 8 Elite phone ($540–700), QNN | its own video | 8 Hz (P) |
+| possible | E. Pi 5 + Hailo-8 or Hailo-10H ($295–375), HailoRT | one Pi HQ, DPT 17, 10 fps | 7–14 Hz (E), only if YOLO26-OBB compiles |
+| no | Browser, WASM | 4K video, DPT 16 | 0.4 Hz (M) |
+| no | Intel Core Ultra mini PC, Ryzen AI Max, Orin NX, M5 Pro | – | sized for l or DPT 33; buys nothing measurable |
+| no | reCamera | – | dropped in [#54](https://github.com/rails49/detector/issues/54) |
 
 ## Models
 
@@ -224,23 +225,32 @@ frame, not averages.
 
 ### Throughput per device
 
-Effective TFLOP/s for small YOLO models (Ultralytics GFLOPs ÷ measured time):
+Each published benchmark gives a model, an input size and a time. Effective throughput is
+the model's FLOPs at that size divided by the time: YOLO26n-OBB at 640×640 is about
+5.8 GFLOP, and the iPhone 17 Pro runs it in 3.9 ms, so 1.5 TFLOP/s. The maximum rate is that
+throughput divided by the 137 GFLOP of one frame of n at DPT 16 over the whole 2×1 m layout
+(two 2048 tiles). Its inverse is the time per frame, the lowest possible latency.
 
-| Device | n-size figure | Source |
-|---|---|---|
-| iPhone 17 Pro, Core ML on the Neural Engine | 1.5 at 640 alone; 0.6 at 1024 inside a camera app | P |
-| iPhone 16 Pro Max | none published | measure in [#42](https://github.com/rails49/detector/issues/42) |
-| Mac mini M4, Core AI | 1.3 at 640 | P |
-| Snapdragon 8 Gen 5 NPU, QNN | 1.1 at 640 in an app | P |
-| Jetson Orin Nano Super, TensorRT | 1.2 at 640 | P |
-| Intel Lunar Lake iGPU | 1.6 at 640 | P |
-| Pi 5 + Hailo-8 / Hailo-10H | 0.9–1.8 / 1.5–1.9, from YOLO11-OBB | E |
-| RTX 5060 | 15–25 for l; n lower, not published | E |
-| Browser WASM, iPhone 16 | 0.06 | M |
+| Device, runtime | Benchmark | TFLOP/s | Max rate, n at DPT 16, whole layout | Source |
+|---|---|---|---|---|
+| iPhone 17 Pro, Core ML on the Neural Engine, model alone | n-OBB, 640, 3.9 ms | 1.5 | 11 Hz | P |
+| iPhone 17 Pro, the same inside a camera app | n-OBB, 1024, 24.1 ms | 0.6 | 4.4 Hz | P |
+| iPhone 16 Pro Max | none | – | measure in [#42](https://github.com/rails49/detector/issues/42) | |
+| Mac mini M4, Core AI | n-OBB, 640, 4.3 ms | 1.3 | 9.5 Hz | P |
+| Mac mini M4, Core ML | n-OBB, 640, 15.2 ms | 0.38 | 2.8 Hz | P |
+| M2 Max | none | – | measure in [#43](https://github.com/rails49/detector/issues/43) | |
+| Snapdragon 8 Gen 5 NPU, QNN, in an app | n-OBB, 640, 5.1 ms | 1.1 | 8 Hz | P |
+| Jetson Orin Nano Super, TensorRT | n detect, 640, 4.6 ms | 1.2 | 9 Hz | P |
+| Intel Lunar Lake iGPU, OpenVINO | n detect, 640, 3.3 ms | 1.6 | 12 Hz | P |
+| Pi 5 + Hailo-8 | YOLO11n-OBB, 1024, as a stand-in | 0.9–1.8 | 7–13 Hz, if YOLO26-OBB compiles | E |
+| Pi 5 + Hailo-10H | YOLO11n-OBB, 1024, as a stand-in | 1.5–1.9 | 11–14 Hz, if YOLO26-OBB compiles | E |
+| RTX 5060, TensorRT | l-OBB, scaled from a T4 | 15–25 for l | n not published; l itself would run 8–13 Hz | E |
+| Browser WASM, iPhone 16 | n, 960×544, 120 ms | 0.06 | 0.4 Hz, 2.3 s per frame | M |
 
-Figures at 640 leave the hardware partly idle; 2048 tiles should do better, so these are
-floors. The in-app iPhone figure shows the other risk: a camera running beside the model
-cost 3.9×. Sources:
+Two errors pull in opposite directions. A 640 input leaves the hardware partly idle, so
+2048 tiles should run faster than these figures suggest. A camera running beside the model
+slows it: on the iPhone 17 Pro the in-app time was 3.9× the isolated time. The rate also
+excludes capture and transfer. Sources:
 [compute-hardware.md](https://github.com/rails49/detector/blob/research/compute-hardware/docs/research/compute-hardware.md),
 [hailo-8.md](https://github.com/rails49/detector/blob/research/hailo-8/docs/research/hailo-8.md).
 
@@ -281,8 +291,8 @@ Rule: latency, capture to L0, is at most one frame period: 100 ms at 10 Hz, 200 
 
 **Detector, n at DPT 16.** 137 GFLOP per frame, finished inside the period, needs 1.37
 TFLOP/s at 10 Hz and 0.69 at 5 Hz, plus capture and transfer time inside the same budget.
-Every published phone, Mac, Jetson and Hailo figure for small models sits at 0.6–1.9: 5 Hz
-fits, 10 Hz is at the edge. Only the RTX PC clears 10 Hz with margin. Cropping to strips of
+The published phone, Mac, Jetson and Hailo figures give 3–14 Hz for the whole layout:
+5 Hz fits on most, 10 Hz is at the edge. Only the RTX PC clears 10 Hz with margin. Cropping to strips of
 track would save 2–6× on this layout ([#33](https://github.com/rails49/detector/issues/33))
 and bring 10 Hz into phone range, at the cost of rotated strips, duplicate boxes at
 turnouts and fixed input shapes per layout.
