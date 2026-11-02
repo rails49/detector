@@ -95,11 +95,11 @@ describe('the export’s decode, then resample', () => {
     const before = await sharp(jpeg).resize(size.width, size.height).removeAlpha().raw().toBuffer();
     const after = await decodeResampled(jpeg, size);
 
-    expect([after.width, after.height]).toEqual([size.width, size.height]);
+    expect([after.width, after.height, after.channels]).toEqual([size.width, size.height, 3]);
     expect(after.data.equals(before)).toBe(true);
   });
 
-  it('resamples what resample resamples, at any ratio', async () => {
+  it('resamples what resample resamples, within 2, mean 0.75, at any ratio', async () => {
     const src = syntheticFrame({ width: 1600, height: 900 });
     const png = await sharp(rgb(src), { raw: { width: 1600, height: 900, channels: 3 } })
       .png()
@@ -108,5 +108,6 @@ describe('the export’s decode, then resample', () => {
 
     const d = difference(resample(src, size), (await decodeResampled(png, size)).data);
     expect(d.max).toBeLessThanOrEqual(2);
+    expect(d.mean).toBeLessThanOrEqual(0.75);
   });
 });

@@ -184,9 +184,7 @@ async function exportArchive(
 
     // Decoded once to raw pixels at the target size; each tile is cut from that.
     const bytes = (await archive.getImage(image.filename))!;
-    const resampled = await decodeResampled(bytes, image.size);
-    const data = resampled.data;
-    const raw = { width: resampled.width, height: resampled.height, channels: 3 as const };
+    const { data, ...raw } = await decodeResampled(bytes, image.size);
 
     for (const tile of image.tiles) {
       const { width, height } = tile;
