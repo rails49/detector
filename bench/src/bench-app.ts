@@ -60,13 +60,13 @@ export class BenchApp extends LitElement {
   private readonly params = new URLSearchParams(location.search);
   private readonly runtime: Runtime = this.params.get('runtime') === 'webgpu' ? 'webgpu' : 'wasm';
   private readonly threads = Number(this.params.get('threads')) || 0;
-  private frames: ImageBitmap[] = [];
+  private frame?: ImageBitmap;
   private record?: { run: DetectorRun; camera?: CameraRun };
 
   constructor() {
     super();
     this.side = 2048;
-    this.status = 'loading frames';
+    this.status = 'loading the frame';
     this.running = false;
     this.summary = '';
     this.crash = takeNote();
@@ -80,9 +80,8 @@ export class BenchApp extends LitElement {
   private async load(): Promise<void> {
     try {
       const manifest: Manifest = await (await fetch(`${DATA}manifest.json`)).json();
-      // One frame: a decoded frame at DPT 16 holds about 47 MB, and iOS kills tabs that use too much.
       const blob = await (await fetch(`${DATA}${manifest.frames[0].file}`)).blob();
-      this.frames = [await createImageBitmap(blob)];
+      this.frame = await createImageBitmap(blob);
       this.manifest = manifest;
       this.status = 'ready';
     } catch (error) {
@@ -116,6 +115,7 @@ export class BenchApp extends LitElement {
     const settings = `${this.runtime} ${precision}, ${tiles.length} tiles of ${this.side}, camera ${camera ? camera.record().load : 'off'}`;
     this.running = true;
     this.summary = '';
+    this.crash = undefined;
     const wakeLock = await navigator.wakeLock?.request('screen').catch(() => undefined);
     let detector: Detector | undefined;
     try {
@@ -126,7 +126,7 @@ export class BenchApp extends LitElement {
       const loadMs = performance.now() - t0;
       this.status = 'first frame';
       noteStep(settings, this.status);
-      const warmup = await detector.run(this.frames[0], tiles);
+      const warmup = await detector.run(this.frame!, tiles);
       const run: DetectorRun = {
         device: this.value('device'),
         userAgent: navigator.userAgent,
@@ -145,7 +145,7 @@ export class BenchApp extends LitElement {
         frames: [],
       };
       camera?.reset();
-      run.frames = await runUntil(detector, this.frames, tiles, endAt, () => this.running, (frame, count) => {
+      run.frames = await runUntil(detector, this.frame!, tiles, endAt, () => this.running, (frame, count) => {
         const left = Math.max(0, (endAt - performance.now()) / 1000);
         this.status = `frame ${count}: ${(frame.end - frame.start).toFixed(0)} ms, ${frame.boxes} boxes, ${left.toFixed(0)} s left`;
         noteStep(settings, `frame ${count + 1}`);
@@ -234,7 +234,7 @@ export class BenchApp extends LitElement {
           ? html`<button @click=${this.stop}>Stop</button>`
           : html`<button ?disabled=${!m} @click=${this.start}>Run</button>`}
       </div>
-      ${this.crash ? html`<p>The last run did not finish, so the tab probably crashed. ${this.crash}.</p>` : ''}
+      ${this.crash ? html`<p>The last run did not finish: the tab was closed, reloaded or crashed. ${this.crash}.</p>` : ''}
       <div>${this.status}</div>
       ${this.summary
         ? html`

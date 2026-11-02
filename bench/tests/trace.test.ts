@@ -11,6 +11,11 @@ it('reports the last step of a run that did not finish, once', () => {
   expect(takeNote()).toBeUndefined();
 });
 
+it('ignores a note it cannot read', () => {
+  localStorage.setItem('bench-run', '{}');
+  expect(takeNote()).toBeUndefined();
+});
+
 it('reports nothing after a run that ended', () => {
   noteStep('wasm fp32, 1 tiles of 1024', 'frame 3');
   clearNote();

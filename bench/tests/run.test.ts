@@ -12,17 +12,17 @@ function fakeDetector(seen: string[]): FrameDetector<string> {
 }
 
 describe('runUntil', () => {
-  it('cycles through the frames until stopped', async () => {
+  it('runs the frame until stopped', async () => {
     const seen: string[] = [];
     let count = 0;
-    const frames = await runUntil(fakeDetector(seen), ['a', 'b'], [], Infinity, () => count < 5, () => count++);
-    expect(frames).toHaveLength(5);
-    expect(seen).toEqual(['a', 'b', 'a', 'b', 'a']);
+    const frames = await runUntil(fakeDetector(seen), 'a', [], Infinity, () => count < 3, () => count++);
+    expect(frames).toHaveLength(3);
+    expect(seen).toEqual(['a', 'a', 'a']);
   });
 
   it('runs nothing once the end time has passed', async () => {
     const seen: string[] = [];
-    const frames = await runUntil(fakeDetector(seen), ['a'], [], performance.now() - 1, () => true, () => {});
+    const frames = await runUntil(fakeDetector(seen), 'a', [], performance.now() - 1, () => true, () => {});
     expect(frames).toEqual([]);
   });
 });

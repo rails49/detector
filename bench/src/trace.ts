@@ -28,7 +28,7 @@ export function takeNote(): string | undefined {
     localStorage.removeItem(KEY);
     if (!value) return undefined;
     const { settings, step } = JSON.parse(value);
-    return `${settings}: stopped at ${step}`;
+    return settings && step ? `${settings}: stopped at ${step}` : undefined;
   } catch {
     return undefined;
   }

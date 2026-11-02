@@ -5,10 +5,10 @@ export interface FrameDetector<F> {
   run(frame: F, tiles: Tile[]): Promise<DetectorFrame>;
 }
 
-/** Runs `detector` over `frames` in turn until `endAt` (a `performance.now()` time) or until `going()` is false. */
+/** Runs `detector` on `frame` until `endAt` (a `performance.now()` time) or until `going()` is false. */
 export async function runUntil<F>(
   detector: FrameDetector<F>,
-  frames: F[],
+  frame: F,
   tiles: Tile[],
   endAt: number,
   going: () => boolean,
@@ -16,9 +16,9 @@ export async function runUntil<F>(
 ): Promise<DetectorFrame[]> {
   const done: DetectorFrame[] = [];
   while (going() && performance.now() < endAt) {
-    const frame = await detector.run(frames[done.length % frames.length], tiles);
-    done.push(frame);
-    onFrame(frame, done.length);
+    const result = await detector.run(frame, tiles);
+    done.push(result);
+    onFrame(result, done.length);
   }
   return done;
 }
