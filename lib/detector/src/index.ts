@@ -33,9 +33,12 @@ export type { Detection, Frame } from './types.ts';
 export { boxCorners, carWidthPx, spanCorners, spanToPolygon } from './geometry.ts';
 
 //── Tiles ────────────────────────────────────────────────────────────────────
-// Where a frame larger than the canvas is cut. The export cuts training tiles
-// with these, and `detect` will cut its input with the same ones (#10).
-export { tileOrigins, tileOverlapPx } from './tiles.ts';
+// How a frame becomes detector input: resampled to the target DPT and cut
+// into canvas tiles. `inputLayout` is the one place that is computed; the
+// export cuts training tiles with it and `detect` cuts its input with it, so
+// the two cannot disagree on a tile position (ADR 0014).
+export { inputLayout, tileOrigins, tileOverlapPx } from './tiles.ts';
+export type { InputLayout, Tile } from './tiles.ts';
 
 //── Class index ──────────────────────────────────────────────────────────────
 // The YOLO class a stored `class` trains as. The class list is this project's
