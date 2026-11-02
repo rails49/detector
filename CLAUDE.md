@@ -49,9 +49,9 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
   `onnxruntime-web`, a second copy beside the UI's.
 - There is no model release yet. The current model trains on the ceiling
   captures, kept locally and not in git, less the images
-  `dataset/holdout.json` holds out. r49's `archives/` is empty for now. No
-  number from these images predicts accuracy (`SPEC.md` § Accuracy). There is
-  no automated model gate, and no substitute for one (ADR 0007).
+  `dataset/holdout.json` holds out. No number from these images predicts
+  accuracy (`SPEC.md` § Accuracy). There is no automated model gate, and no
+  substitute for one (ADR 0007).
 - One model is in occupancy's live path, and the classifier is parked
   ([occupancy ADR 0004](https://github.com/rails49/occupancy/blob/main/docs/adr/0004-one-model-in-the-live-path.md)).
 - `@detector/classifier` keeps its three entry points, so `onnxruntime-node`

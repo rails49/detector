@@ -107,8 +107,7 @@ There are no `.r49` archives here any more (rails49/occupancy#63). The corpus,
 for training and testing, is the `archives/<handle>/<slug>.r49` tree of
 [`rails49/r49`](https://github.com/rails49/r49), which takes submissions by pull
 request under CC BY 4.0. That tree is empty for now. The archives used today
-are ceiling captures in a local folder outside git; they move to r49 once the
-format questions are settled (rails49/r49#51). No number derived from them
+are ceiling captures in a local folder outside git (rails49/r49#51). No number derived from them
 predicts model accuracy (`SPEC.md` § Accuracy). Training reads archives from a
 local directory passed as `--in`.
 
