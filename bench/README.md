@@ -1,10 +1,10 @@
 # Detector in Safari
 
 A test page for [#42](https://github.com/rails49/detector/issues/42). It runs the
-detector in onnxruntime-web, WASM or WebGPU, on frames from the ceiling captures,
-while the rear camera runs at its largest size. Camera frames go to no model; at
-10 Hz the page draws them into a canvas, and optionally reads them back, as the
-classifier would. After a run it prints a summary to copy and offers the
+detector in onnxruntime-web, WASM or WebGPU, on one frame from the ceiling
+captures, while the rear camera runs at its largest size. Camera frames go to no
+model; at 10 Hz the page draws them into a canvas, and on request reads each
+whole frame back. The summary names which. After a run it prints a summary to copy and offers the
 per-frame log as JSON.
 
 The page is not the live path. It is not bound by
@@ -16,7 +16,8 @@ Cloudflare Pages. WASM inference runs in ORT's proxy worker; WebGPU has none.
 
 The models and frames are gitignored. `detector/export_bench.py` writes them to
 `public/data/`: n at each tile side (2048, 1024) as fp32, fp16 and INT8 ONNX, and
-three frames of `ceiling-2026-10-28` resampled to DPT 16 with the layout's box.
+the first image of `ceiling-2026-10-28` resampled to DPT 16 with the layout's
+box. The page loads only the first frame in the manifest.
 
 ```sh
 cd detector
@@ -43,3 +44,6 @@ reads them once per page.
 3. Pick runtime, precision, tile size, tile count and minutes, then Run. The
    first frame is timed separately and left out of the statistics.
 4. Copy the summary into #42.
+
+If a run ends the tab (iOS kills a tab that uses too much memory), the
+reloaded page names the run's settings and the step it reached.

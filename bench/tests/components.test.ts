@@ -43,6 +43,15 @@ describe('bench-app', () => {
     expect(app.shadowRoot!.querySelector<HTMLButtonElement>('button')!.disabled).toBe(false);
   });
 
+  it('shows where a run that crashed the tab stopped', async () => {
+    vi.stubGlobal('fetch', async () => new Response('missing', { status: 404 }));
+    localStorage.setItem('bench-run', JSON.stringify({ settings: 'webgpu fp32, 2 tiles of 2048', step: 'first frame' }));
+    const app = document.createElement('bench-app') as BenchApp;
+    document.body.append(app);
+    await app.updateComplete;
+    expect(app.shadowRoot!.textContent).toContain('webgpu fp32, 2 tiles of 2048: stopped at first frame');
+  });
+
   it('reports assets it cannot load', async () => {
     vi.stubGlobal('fetch', async () => new Response('missing', { status: 404 }));
     const app = document.createElement('bench-app') as BenchApp;

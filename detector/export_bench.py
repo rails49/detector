@@ -1,9 +1,9 @@
 """Write the models and frames the Safari test page in `bench/` loads (#42).
 
 For each tile side (2048, 1024): the model as fp32, fp16 and static INT8 ONNX.
-From a calibrated `.r49` archive: a few frames resampled to the target DPT, and
-the layout's bounding box in those frames. Everything goes to
-`bench/public/data/`, with `manifest.json` describing it.
+From a calibrated `.r49` archive: its first image (or `--frames` images)
+resampled to the target DPT, and the layout's bounding box in those frames.
+Everything goes to `bench/public/data/`, with `manifest.json` describing it.
 
 The archive's native DPT is not stored in the `.r49`; pass the one its README
 gives (32.6 for `ceiling-2026-10-28`).
@@ -164,7 +164,7 @@ def main() -> None:
     parser.add_argument("--archive", type=Path, required=True)
     parser.add_argument("--native-dpt", type=float, required=True)
     parser.add_argument("--dpt", type=float, default=16)
-    parser.add_argument("--frames", type=int, default=3)
+    parser.add_argument("--frames", type=int, default=1)
     parser.add_argument("--name", default="n16", help="Model name in the page.")
     args = parser.parse_args()
 

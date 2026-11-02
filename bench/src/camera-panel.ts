@@ -80,8 +80,8 @@ export class CameraPanel extends LitElement {
         <label
           >At 10 Hz
           <select name="load" ?disabled=${!!this.camera}>
-            <option value="read">draw and read the frame</option>
             <option value="draw">draw the frame</option>
+            <option value="read">draw and read the frame</option>
             <option value="none">nothing</option>
           </select></label
         >

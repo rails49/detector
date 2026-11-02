@@ -24,6 +24,8 @@ async function loadOrt(runtime: Runtime): Promise<typeof Ort> {
 export class Detector {
   private readonly canvas: OffscreenCanvas;
   private readonly context: OffscreenCanvasRenderingContext2D;
+  // Reused across tiles unless the WASM proxy takes each buffer.
+  private readonly input?: Float32Array;
 
   private constructor(
     private readonly ort: typeof Ort,
@@ -32,6 +34,7 @@ export class Detector {
   ) {
     this.canvas = new OffscreenCanvas(side, side);
     this.context = this.canvas.getContext('2d', { willReadFrequently: true })!;
+    if (!ort.env.wasm.proxy) this.input = new Float32Array(3 * side * side);
   }
 
   static async create(runtime: Runtime, modelUrl: string, side: number, threads: number): Promise<Detector> {
@@ -48,8 +51,7 @@ export class Detector {
     for (const tile of tiles) {
       const t0 = performance.now();
       this.context.drawImage(frame, tile.x, tile.y, side, side, 0, 0, side, side);
-      // A new array per tile: the WASM proxy transfers the buffer to its worker.
-      const input = new Float32Array(3 * side * side);
+      const input = this.input ?? new Float32Array(3 * side * side);
       rgbaToChw(this.context.getImageData(0, 0, side, side).data, input);
       const tensor = new this.ort.Tensor('float32', input, [1, 3, side, side]);
       const t1 = performance.now();

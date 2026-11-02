@@ -5,6 +5,7 @@ import './camera-panel.js';
 import { Detector, type Runtime } from './detector.js';
 import { saveBlob } from './download.js';
 import { runUntil } from './run.js';
+import { clearNote, noteStep, takeNote } from './trace.js';
 import { summaryText, type CameraRun, type DetectorRun } from './summary.js';
 import { tileGrid, type Box } from './tiles.js';
 
@@ -29,6 +30,7 @@ export class BenchApp extends LitElement {
     status: { state: true },
     running: { state: true },
     summary: { state: true },
+    crash: { state: true },
   };
 
   static styles = css`
@@ -52,20 +54,22 @@ export class BenchApp extends LitElement {
   declare status: string;
   declare running: boolean;
   declare summary: string;
+  declare crash?: string;
 
   // ORT reads its runtime and thread count once per page, so both are URL parameters.
   private readonly params = new URLSearchParams(location.search);
   private readonly runtime: Runtime = this.params.get('runtime') === 'webgpu' ? 'webgpu' : 'wasm';
   private readonly threads = Number(this.params.get('threads')) || 0;
-  private frames: ImageBitmap[] = [];
+  private frame?: ImageBitmap;
   private record?: { run: DetectorRun; camera?: CameraRun };
 
   constructor() {
     super();
     this.side = 2048;
-    this.status = 'loading frames';
+    this.status = 'loading the frame';
     this.running = false;
     this.summary = '';
+    this.crash = takeNote();
   }
 
   connectedCallback(): void {
@@ -76,9 +80,8 @@ export class BenchApp extends LitElement {
   private async load(): Promise<void> {
     try {
       const manifest: Manifest = await (await fetch(`${DATA}manifest.json`)).json();
-      this.frames = await Promise.all(
-        manifest.frames.map(async (f) => createImageBitmap(await (await fetch(`${DATA}${f.file}`)).blob())),
-      );
+      const blob = await (await fetch(`${DATA}${manifest.frames[0].file}`)).blob();
+      this.frame = await createImageBitmap(blob);
       this.manifest = manifest;
       this.status = 'ready';
     } catch (error) {
@@ -109,17 +112,21 @@ export class BenchApp extends LitElement {
     const endAt = performance.now() + Number(this.value('duration')) * 60_000;
     const camera = this.renderRoot.querySelector<CameraPanel>('camera-panel')!.camera;
     const model = m.models.find((x) => x.side === this.side && x.precision === precision)!;
+    const settings = `${this.runtime} ${precision}, ${tiles.length} tiles of ${this.side}, camera ${camera ? camera.record().load : 'off'}`;
     this.running = true;
     this.summary = '';
+    this.crash = undefined;
     const wakeLock = await navigator.wakeLock?.request('screen').catch(() => undefined);
     let detector: Detector | undefined;
     try {
       this.status = 'loading model';
+      noteStep(settings, this.status);
       const t0 = performance.now();
       detector = await Detector.create(this.runtime, `${DATA}${model.file}`, this.side, this.threads);
       const loadMs = performance.now() - t0;
       this.status = 'first frame';
-      const warmup = await detector.run(this.frames[0], tiles);
+      noteStep(settings, this.status);
+      const warmup = await detector.run(this.frame!, tiles);
       const run: DetectorRun = {
         device: this.value('device'),
         userAgent: navigator.userAgent,
@@ -138,9 +145,10 @@ export class BenchApp extends LitElement {
         frames: [],
       };
       camera?.reset();
-      run.frames = await runUntil(detector, this.frames, tiles, endAt, () => this.running, (frame, count) => {
+      run.frames = await runUntil(detector, this.frame!, tiles, endAt, () => this.running, (frame, count) => {
         const left = Math.max(0, (endAt - performance.now()) / 1000);
         this.status = `frame ${count}: ${(frame.end - frame.start).toFixed(0)} ms, ${frame.boxes} boxes, ${left.toFixed(0)} s left`;
+        noteStep(settings, `frame ${count + 1}`);
       });
       if (run.frames.length === 0) {
         this.status = 'stopped before the first timed frame';
@@ -152,6 +160,7 @@ export class BenchApp extends LitElement {
     } catch (error) {
       this.status = `failed: ${error}`;
     } finally {
+      clearNote();
       this.running = false;
       await detector?.release();
       await wakeLock?.release();
@@ -225,6 +234,7 @@ export class BenchApp extends LitElement {
           ? html`<button @click=${this.stop}>Stop</button>`
           : html`<button ?disabled=${!m} @click=${this.start}>Run</button>`}
       </div>
+      ${this.crash ? html`<p>The last run did not finish: the tab was closed, reloaded or crashed. ${this.crash}.</p>` : ''}
       <div>${this.status}</div>
       ${this.summary
         ? html`
