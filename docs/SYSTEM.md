@@ -62,7 +62,11 @@ reads both and writes:
 `bin/test.sh` regenerates both into a temporary tree and fails on a
 difference. The generator fails, naming the class, when a `detector.classes`
 entry is not in the vocabulary (`lib/config/tests/generateConfig.test.ts`), and
-fails if `classifier.labels` reappears (rails49/occupancy#8). Python reads
+fails if `classifier.labels` reappears (rails49/occupancy#8). Given
+`--base-config`, it also fails unless that config's `detector.classes` is a
+prefix of this one's; `bin/test.sh` passes `config.yaml` as it was at the merge
+base of `HEAD` and `origin/main`, so a reorder or a removal fails the gate
+(#12). `pnpm config:generate` passes no base and compares nothing. Python reads
 `config.yaml` and the package's data file directly. See ADR 0009.
 
 ## Workspace packages
