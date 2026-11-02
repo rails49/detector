@@ -27,9 +27,9 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
   a new branch from `origin/main`:
   `git fetch -q origin && git switch --no-track -c <issue>-<slug> origin/main`.
   Every code change passes the gate and the `code-review` skill before its PR.
-- `SPEC.md` describes the target. Where it or an ADR disagrees with the code
-  (for example `detector.input: [960, 544]` against ADR 0014), the gap is the
-  planned migration; leave it unless the task is that migration.
+- `SPEC.md` describes the target. Where it or an ADR disagrees with the code,
+  the gap is the planned migration; leave it unless the task is that
+  migration.
 - The `.r49` format is `@rails49/r49`'s, pinned once in `pnpm-workspace.yaml`.
   A format change is a release in `rails49/r49`, then a bump here (org [ADR-0022](https://github.com/rails49/.github/blob/main/docs/adr/0022-the-r49-format-is-r49s-and-each-consumer-pins-it.md)).
 - `config.json` and `lib/config/src/` are generated. Edit `config.yaml` and run

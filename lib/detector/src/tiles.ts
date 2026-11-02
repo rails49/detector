@@ -33,7 +33,7 @@ export interface Tile {
   readonly height: number;
 }
 
-/** How a frame becomes detector input: resampled to the target DPT, then cut into tiles. */
+/** How a frame becomes the model's input: resampled to the target DPT, then cut into tiles. */
 export interface InputLayout {
   /** Frame → resampled frame, `targetDpt / dpt`. Above 1 is an upsample. */
   readonly scale: number;

@@ -33,7 +33,7 @@ export type { Detection, Frame } from './types.ts';
 export { boxCorners, carWidthPx, spanCorners, spanToPolygon } from './geometry.ts';
 
 //── Tiles ────────────────────────────────────────────────────────────────────
-// How a frame becomes detector input: resampled to the target DPT and cut
+// How a frame becomes the model's input: resampled to the target DPT and cut
 // into canvas tiles. `inputLayout` is the one place that is computed; the
 // export cuts training tiles with it and `detect` cuts its input with it, so
 // the two cannot disagree on a tile position (ADR 0014).
