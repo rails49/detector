@@ -5,6 +5,7 @@ import './camera-panel.js';
 import { Detector, type Runtime } from './detector.js';
 import { saveBlob } from './download.js';
 import { runUntil } from './run.js';
+import { clearNote, noteStep, takeNote } from './trace.js';
 import { summaryText, type CameraRun, type DetectorRun } from './summary.js';
 import { tileGrid, type Box } from './tiles.js';
 
@@ -29,6 +30,7 @@ export class BenchApp extends LitElement {
     status: { state: true },
     running: { state: true },
     summary: { state: true },
+    crash: { state: true },
   };
 
   static styles = css`
@@ -52,6 +54,7 @@ export class BenchApp extends LitElement {
   declare status: string;
   declare running: boolean;
   declare summary: string;
+  declare crash?: string;
 
   // ORT reads its runtime and thread count once per page, so both are URL parameters.
   private readonly params = new URLSearchParams(location.search);
@@ -66,6 +69,7 @@ export class BenchApp extends LitElement {
     this.status = 'loading frames';
     this.running = false;
     this.summary = '';
+    this.crash = takeNote();
   }
 
   connectedCallback(): void {
@@ -76,9 +80,9 @@ export class BenchApp extends LitElement {
   private async load(): Promise<void> {
     try {
       const manifest: Manifest = await (await fetch(`${DATA}manifest.json`)).json();
-      this.frames = await Promise.all(
-        manifest.frames.map(async (f) => createImageBitmap(await (await fetch(`${DATA}${f.file}`)).blob())),
-      );
+      // One frame: a decoded frame at DPT 16 holds about 47 MB, and iOS kills tabs that use too much.
+      const blob = await (await fetch(`${DATA}${manifest.frames[0].file}`)).blob();
+      this.frames = [await createImageBitmap(blob)];
       this.manifest = manifest;
       this.status = 'ready';
     } catch (error) {
@@ -109,16 +113,19 @@ export class BenchApp extends LitElement {
     const endAt = performance.now() + Number(this.value('duration')) * 60_000;
     const camera = this.renderRoot.querySelector<CameraPanel>('camera-panel')!.camera;
     const model = m.models.find((x) => x.side === this.side && x.precision === precision)!;
+    const settings = `${this.runtime} ${precision}, ${tiles.length} tiles of ${this.side}, camera ${camera ? camera.record().load : 'off'}`;
     this.running = true;
     this.summary = '';
     const wakeLock = await navigator.wakeLock?.request('screen').catch(() => undefined);
     let detector: Detector | undefined;
     try {
       this.status = 'loading model';
+      noteStep(settings, this.status);
       const t0 = performance.now();
       detector = await Detector.create(this.runtime, `${DATA}${model.file}`, this.side, this.threads);
       const loadMs = performance.now() - t0;
       this.status = 'first frame';
+      noteStep(settings, this.status);
       const warmup = await detector.run(this.frames[0], tiles);
       const run: DetectorRun = {
         device: this.value('device'),
@@ -141,6 +148,7 @@ export class BenchApp extends LitElement {
       run.frames = await runUntil(detector, this.frames, tiles, endAt, () => this.running, (frame, count) => {
         const left = Math.max(0, (endAt - performance.now()) / 1000);
         this.status = `frame ${count}: ${(frame.end - frame.start).toFixed(0)} ms, ${frame.boxes} boxes, ${left.toFixed(0)} s left`;
+        noteStep(settings, `frame ${count + 1}`);
       });
       if (run.frames.length === 0) {
         this.status = 'stopped before the first timed frame';
@@ -152,6 +160,7 @@ export class BenchApp extends LitElement {
     } catch (error) {
       this.status = `failed: ${error}`;
     } finally {
+      clearNote();
       this.running = false;
       await detector?.release();
       await wakeLock?.release();
@@ -225,6 +234,7 @@ export class BenchApp extends LitElement {
           ? html`<button @click=${this.stop}>Stop</button>`
           : html`<button ?disabled=${!m} @click=${this.start}>Run</button>`}
       </div>
+      ${this.crash ? html`<p>The last run did not finish, so the tab probably crashed. ${this.crash}.</p>` : ''}
       <div>${this.status}</div>
       ${this.summary
         ? html`
