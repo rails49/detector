@@ -111,7 +111,7 @@ The format's own constants are not this project's and do not live here (org [ADR
 
 The vocabulary is what the context menu offers and what a label's `class` must match. `classes` **is** the YOLO class list, verbatim and index-ordered, and every entry must name a class in the vocabulary — the generator fails, naming the class, when one does not. A label maps to the longest entry of `classes` that is a segment-prefix of its class, so `stock` matches `stock.loco.steam` but never `stockyard`; the same rule resolves an overriding `width_mm`. Adding a subtype to `classes` therefore re-maps every already-labeled car of that subtype with **no relabeling**.
 
-> ⚠️ **`classes` is append-only.** A list position *is* a YOLO class index, so reordering or deleting an entry invalidates trained weights while the file still validates. It is the one config edit that can break a model with nothing noticing.
+> ⚠️ **`classes` is append-only.** A list position *is* a YOLO class index, so reordering or deleting an entry invalidates trained weights while every entry still names a known class. The gate refuses it against the base branch's list ([SYSTEM.md § Configuration](docs/SYSTEM.md#configuration)); a released model's class list would be the better reference, and there is none yet.
 
 **The input is a canvas side plus the target DPT**, not an authored `[w, h]` pair, which was the wrong *shape* of parameter once image size falls out of layout extent × DPT rather than being chosen ([rails49/occupancy#130](https://github.com/rails49/occupancy/issues/130)). See [Input geometry](#input-geometry-is-dpt-normalized) for why square, why authored rather than derived, and what bounds its value.
 
