@@ -1,83 +1,66 @@
 import { DETECTOR_CANVAS } from './generated.ts';
+import type { Pixels } from './resample.ts';
 import type { Tile } from './tiles.ts';
-import type { Frame } from './types.ts';
 
 /**
  * Ultralytics' letterbox fill, which `export:yolo` pads every training tile
- * with. The model was trained on padding this colour.
+ * with, per channel. The model was trained on padding this grey.
  */
-export const PAD_GRAY = 'rgb(114, 114, 114)';
+export const PAD_LEVEL = 114;
 
 /**
- * The 2D context, narrowed to what painting the input touches.
+ * The 2D context, narrowed to what copying a frame touches.
  *
- * Structural rather than `CanvasRenderingContext2D` so this is testable: no
- * test environment in this repo can execute `drawImage` and read the pixels
- * back — `lib/*` run in bare node, and `@web/test-runner` was removed
- * deliberately (rails49/occupancy#109). What a fake can still pin is that the
- * context is *configured* as intended and paints in the right place, which is
- * exactly the bug this module exists for (rails49/occupancy#132). It does not
- * pin the resulting pixels; nothing here can.
+ * Structural rather than `CanvasRenderingContext2D` so a fake can pin the one
+ * thing that matters here: the frame is copied **unscaled**, at its own pixel
+ * count, and no filter is asked for. The resample is `resample`'s, in our own
+ * code (#7), because `imageSmoothingQuality` is a hint each user agent
+ * implements as it likes, and two devices fed the model different pixels from
+ * the same frame (rails49/occupancy#112).
  */
 export interface PaintTarget {
-  fillStyle: string | CanvasGradient | CanvasPattern;
-  imageSmoothingEnabled: boolean;
-  imageSmoothingQuality: ImageSmoothingQuality;
-  fillRect(x: number, y: number, width: number, height: number): void;
-  drawImage(
-    source: CanvasImageSource,
-    sx: number,
-    sy: number,
-    sw: number,
-    sh: number,
-    dx: number,
-    dy: number,
-    dw: number,
-    dh: number
-  ): void;
+  drawImage(source: CanvasImageSource, dx: number, dy: number): void;
 }
 
 /**
- * Resample `source` to the target DPT: the whole frame, drawn at the layout's
- * resampled size, down or up.
- *
- * **The filter is requested here, and that is the point of the function**
- * (rails49/occupancy#132). Left unset, `drawImage` resamples with whatever the
- * user agent picks, so the app disagrees with its own training data *and* two
- * deployed devices disagree with each other. rails49/occupancy#112 measured the
- * size of that: 36% recall against 31%, identical frames, identical weights.
- *
- * `'high'` because training resamples with `sharp`'s default, a Lanczos
- * filter, and `'high'` is the user agent's best filter. It is a hint the user
- * agent may implement however it likes, so it does not *guarantee* any filter;
- * pinning one across user agents means resampling ourselves, which is #7.
- *
- * Set on every call rather than once at construction because **sizing a canvas
- * resets its 2D context state**, and the resampled canvas is resized whenever
- * the frame's size or DPT changes.
- *
- * @param frame The source's own pixel count.
- * @param size  The resampled size, `inputLayout`'s `size`. The context's
- *              canvas must be at least this large.
+ * Copy `source` onto the context's canvas at its own size, top-left. The
+ * canvas must be the source's size: `drawImage` with no destination size
+ * draws at the source's intrinsic size, so nothing is scaled and the smoothing
+ * settings are never consulted.
  */
-export function paintResampled(ctx: PaintTarget, source: CanvasImageSource, frame: Frame, size: Frame): void {
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(source, 0, 0, frame.width, frame.height, 0, 0, size.width, size.height);
+export function paintFrame(ctx: PaintTarget, source: CanvasImageSource): void {
+  ctx.drawImage(source, 0, 0);
 }
 
 /**
- * Paint one tile of the resampled frame onto the canvas: the padding fill
- * first, then the tile's pixels copied 1:1 into the top-left corner, so a
- * tile smaller than the canvas is padded on the right and bottom exactly as
- * `export:yolo` pads it (ADR 0014: padded, never resized).
+ * One tile of the resampled frame as the network's input: RGB, planar, scaled
+ * to `0…1`, the tile's pixels in the top-left corner and the rest of the
+ * canvas padding, so a tile smaller than the canvas is padded on the right and
+ * bottom exactly as `export:yolo` pads it (ADR 0014: padded, never resized).
  *
- * @param resampled The canvas `paintResampled` drew into.
+ * No mean/std normalization — Ultralytics bakes that into the graph, and
+ * `export_onnx.py`'s calibration reader feeds it the same plain division.
+ *
+ * @param resampled The frame at the target DPT, `resample`'s output.
  * @param tile      One of `inputLayout`'s tiles.
+ * @param planar    Where to write, `3 × DETECTOR_CANVAS²` long; reused across
+ *                  tiles so a live view does not allocate per frame.
  */
-export function paintTile(ctx: PaintTarget, resampled: CanvasImageSource, tile: Tile): void {
-  ctx.imageSmoothingEnabled = false;
-  ctx.fillStyle = PAD_GRAY;
-  ctx.fillRect(0, 0, DETECTOR_CANVAS, DETECTOR_CANVAS);
-  ctx.drawImage(resampled, tile.x, tile.y, tile.width, tile.height, 0, 0, tile.width, tile.height);
+export function tileInput(resampled: Pixels, tile: Tile, planar: Float32Array): void {
+  const area = DETECTOR_CANVAS * DETECTOR_CANVAS;
+  if (planar.length !== 3 * area) {
+    throw new Error(`the input tensor needs 3 × ${DETECTOR_CANVAS}² floats; got ${planar.length}`);
+  }
+  planar.fill(PAD_LEVEL / 255);
+
+  const { data, width } = resampled;
+  for (let y = 0; y < tile.height; y++) {
+    let i = ((tile.y + y) * width + tile.x) * 4;
+    let o = y * DETECTOR_CANVAS;
+    for (let x = 0; x < tile.width; x++, i += 4, o++) {
+      planar[o] = data[i] / 255;
+      planar[o + area] = data[i + 1] / 255;
+      planar[o + 2 * area] = data[i + 2] / 255;
+    }
+  }
 }

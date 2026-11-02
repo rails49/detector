@@ -1,109 +1,80 @@
 import { describe, expect, it } from 'vitest';
 import { DETECTOR_CANVAS } from '../src/generated.ts';
-import { PAD_GRAY, paintResampled, paintTile, type PaintTarget } from '../src/preprocess.ts';
+import { PAD_LEVEL, paintFrame, tileInput, type PaintTarget } from '../src/preprocess.ts';
+import type { Pixels } from '../src/resample.ts';
 
 /**
- * Painting the input, driven by a fake context.
- *
- * What this can pin is that the context is *configured* as intended — the
- * resampling filter above all (rails49/occupancy#132) — and that the paint
- * happens in the right order at the right place. What it cannot pin is the
- * resulting pixels: no test environment here executes `drawImage` and reads
- * them back (`lib/*` is bare node, `@web/test-runner` went in
- * rails49/occupancy#109). That gap is open on #7 and no fake closes it.
+ * The detector's input, before the model. The resample itself is `resample`'s
+ * and has its own tests; what is pinned here is that the frame reaches it
+ * unscaled, and how a tile becomes the tensor.
  */
 
-/** One recorded paint operation, with the context state it ran under. */
-interface Op {
-  readonly name: 'fillRect' | 'drawImage';
-  readonly args: readonly unknown[];
-  readonly fillStyle: string | CanvasGradient | CanvasPattern;
-  readonly smoothingEnabled: boolean;
-  readonly smoothingQuality: ImageSmoothingQuality;
-}
-
-/**
- * A context that records rather than paints.
- *
- * State is snapshotted *per operation* rather than read at the end, because the
- * bug being guarded is an ordering one: a filter set after the draw is a filter
- * that did nothing.
- */
-class Recorder implements PaintTarget {
-  fillStyle: string | CanvasGradient | CanvasPattern = '';
-  // Deliberately *not* the values under test, so "assigned" is told from
-  // "already there".
-  imageSmoothingEnabled = false;
-  imageSmoothingQuality: ImageSmoothingQuality = 'low';
-  readonly ops: Op[] = [];
-
-  fillRect(...args: number[]): void {
-    this.#record('fillRect', args);
-  }
-
-  drawImage(...args: unknown[]): void {
-    this.#record('drawImage', args);
-  }
-
-  #record(name: Op['name'], args: readonly unknown[]): void {
-    this.ops.push({
-      name,
-      args,
-      fillStyle: this.fillStyle,
-      smoothingEnabled: this.imageSmoothingEnabled,
-      smoothingQuality: this.imageSmoothingQuality,
+describe('the frame copy', () => {
+  it('draws the source at its own size, and asks for no filter', () => {
+    // A context with only `drawImage`'s three-argument form: no destination
+    // size to scale to, and no smoothing settings to touch. Assigning one
+    // would throw on the frozen object.
+    const calls: unknown[][] = [];
+    const ctx: PaintTarget = Object.freeze({
+      drawImage: (...args: unknown[]) => {
+        calls.push(args);
+      },
     });
-  }
-}
+    const source = {} as CanvasImageSource;
 
-/** Stand-ins for the pictures: the painters only hand them to `drawImage`. */
-const SOURCE = {} as CanvasImageSource;
-const RESAMPLED = {} as CanvasImageSource;
+    paintFrame(ctx, source);
 
-describe('the resample', () => {
-  it('requests the high-quality filter, whatever the context arrived holding', () => {
-    const ctx = new Recorder();
-    paintResampled(ctx, SOURCE, { width: 4440, height: 2130 }, { width: 2220, height: 1065 });
-
-    expect(ctx.ops).toHaveLength(1);
-    expect(ctx.ops[0].smoothingEnabled).toBe(true);
-    expect(ctx.ops[0].smoothingQuality).toBe('high');
-  });
-
-  it('re-requests it on every call, because sizing a canvas resets the context', () => {
-    const ctx = new Recorder();
-    paintResampled(ctx, SOURCE, { width: 1920, height: 1080 }, { width: 1600, height: 900 });
-    ctx.imageSmoothingEnabled = false;
-    ctx.imageSmoothingQuality = 'low';
-    paintResampled(ctx, SOURCE, { width: 1920, height: 1080 }, { width: 1600, height: 900 });
-
-    expect(ctx.ops[1].smoothingEnabled).toBe(true);
-    expect(ctx.ops[1].smoothingQuality).toBe('high');
-  });
-
-  it('draws the whole source at the resampled size, up or down', () => {
-    const ctx = new Recorder();
-    paintResampled(ctx, SOURCE, { width: 1000, height: 600 }, { width: 1600, height: 960 });
-
-    expect(ctx.ops[0].args).toEqual([SOURCE, 0, 0, 1000, 600, 0, 0, 1600, 960]);
+    expect(calls).toEqual([[source, 0, 0]]);
   });
 });
 
-describe('a tile', () => {
-  it('lays the trained pad colour over the whole canvas first, then the tile over it', () => {
-    const ctx = new Recorder();
-    paintTile(ctx, RESAMPLED, { x: 0, y: 0, width: 1500, height: 750 });
+/** A resampled frame whose every pixel names its position: R = x, G = y. */
+function positions(width: number, height: number): Pixels {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) data.set([x % 256, y % 256, 7, 255], (y * width + x) * 4);
+  }
+  return { data, width, height };
+}
 
-    expect(ctx.ops.map((op) => op.name)).toEqual(['fillRect', 'drawImage']);
-    expect(ctx.ops[0].fillStyle).toBe(PAD_GRAY);
-    expect(ctx.ops[0].args).toEqual([0, 0, DETECTOR_CANVAS, DETECTOR_CANVAS]);
+const AREA = DETECTOR_CANVAS * DETECTOR_CANVAS;
+
+/** The tensor's three channels at canvas pixel (x, y), back in bytes. */
+function rgbAt(planar: Float32Array, x: number, y: number): number[] {
+  const o = y * DETECTOR_CANVAS + x;
+  return [planar[o], planar[o + AREA], planar[o + 2 * AREA]].map((v) => Math.round(v * 255));
+}
+
+describe('a tile', () => {
+  it('holds its pixels 1:1 in the top-left corner, planar and scaled to 0…1', () => {
+    const planar = new Float32Array(3 * AREA);
+    tileInput(positions(300, 200), { x: 40, y: 30, width: 100, height: 50 }, planar);
+
+    expect(rgbAt(planar, 0, 0)).toEqual([40, 30, 7]);
+    expect(rgbAt(planar, 99, 49)).toEqual([139, 79, 7]);
+    expect(planar[0]).toBeCloseTo(40 / 255, 6);
   });
 
-  it('copies its pixels 1:1 into the top-left corner, padded right and bottom, never resized', () => {
-    const ctx = new Recorder();
-    paintTile(ctx, RESAMPLED, { x: 952, y: 0, width: DETECTOR_CANVAS, height: 500 });
+  it('is padded right and bottom with the trained grey, never resized', () => {
+    const planar = new Float32Array(3 * AREA);
+    tileInput(positions(300, 200), { x: 40, y: 30, width: 100, height: 50 }, planar);
 
-    expect(ctx.ops[1].args).toEqual([RESAMPLED, 952, 0, DETECTOR_CANVAS, 500, 0, 0, DETECTOR_CANVAS, 500]);
-    expect(ctx.ops[1].smoothingEnabled).toBe(false);
+    expect(rgbAt(planar, 100, 0)).toEqual([PAD_LEVEL, PAD_LEVEL, PAD_LEVEL]);
+    expect(rgbAt(planar, 0, 50)).toEqual([PAD_LEVEL, PAD_LEVEL, PAD_LEVEL]);
+    expect(rgbAt(planar, DETECTOR_CANVAS - 1, DETECTOR_CANVAS - 1)).toEqual([PAD_LEVEL, PAD_LEVEL, PAD_LEVEL]);
+  });
+
+  it('leaves nothing of the previous tile behind in the reused storage', () => {
+    const planar = new Float32Array(3 * AREA);
+    tileInput(positions(300, 200), { x: 0, y: 0, width: 300, height: 200 }, planar);
+    tileInput(positions(300, 200), { x: 0, y: 0, width: 10, height: 10 }, planar);
+
+    expect(rgbAt(planar, 150, 150)).toEqual([PAD_LEVEL, PAD_LEVEL, PAD_LEVEL]);
+  });
+
+  it('refuses storage that is not the canvas tensor', () => {
+    expect(() => tileInput(positions(10, 10), { x: 0, y: 0, width: 10, height: 10 }, new Float32Array(3))).toThrow(
+      /3 ×/
+    );
   });
 });
