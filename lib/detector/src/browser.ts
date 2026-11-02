@@ -24,9 +24,8 @@ export interface Detector {
    * (`DETECTOR_DPT`) by `resample`, down or up — no DPT is refused — and cut
    * into canvas tiles at `inputLayout`'s positions, each padded on the right
    * and bottom as training pads them. Down, the resample is the export's own
-   * filter, the same on every user agent (#7). The
-   * model runs once per tile, and a car that two overlapping tiles both see
-   * comes back once.
+   * filter, the same on every user agent (#7). The model runs once per tile,
+   * and a car that two overlapping tiles both see comes back once.
    *
    * @param source The picture: a video element mid-stream, an image, a canvas,
    *               a bitmap — anything the 2D context can draw.
