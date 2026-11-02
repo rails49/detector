@@ -25,10 +25,6 @@ import { planArchive, type ImageDecoder, type Span, type Split, type TilePlan } 
  * See SPEC.md § YOLO annotations. What goes where, and what is fatal, is
  * decided by `planArchive` in `yolo_rules.ts`; this script walks directories,
  * decodes images with `sharp`, writes what it is handed, and reports.
- *
- * This is **not** a revival of the parked CNN crop prep. That derivation is
- * blocked on a vocabulary v4 cannot produce; this one needs nothing v4 does not
- * already store.
  */
 
 const USAGE = `Usage: pnpm --filter dataset run export:yolo -- [--in <dir>] [--out <dir>] [--dpt <n>]

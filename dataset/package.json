@@ -5,9 +5,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "export:yolo": "tsx src/yolo_export.ts",
-    "prep": "tsx src/data_prep.ts",
-    "online-diagnostics": "tsx src/online_diagnostics.ts"
+    "export:yolo": "tsx src/yolo_export.ts"
   },
   "dependencies": {
     "@detector/config": "workspace:*",
