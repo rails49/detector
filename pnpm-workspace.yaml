@@ -1,6 +1,7 @@
 packages:
   - "lib/*"
   - "dataset"
+  - "bench"
 # The .r49 format package, pinned once for every package here and for
 # bin/generate_config.py, which reads its data file (org ADR-0022).
 catalog:

@@ -1,0 +1,5 @@
+# Cross-origin isolation, so onnxruntime-web runs more than one WASM thread.
+# Everything the page loads is same-origin.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp

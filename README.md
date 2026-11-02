@@ -35,6 +35,7 @@ noted.
 | Fine-tune, measure and export the detector | `cd detector && uv run python train.py --epochs 20 && uv run python evaluate.py runs/tracer/weights/best.pt && uv run python export_onnx.py` (see [detector/README.md](detector/README.md)) |
 | Draw a model's detections on a new, unlabeled archive | `cd detector && uv run python detect.py runs/<name>/weights/best.pt <archive.r49> --dpt <dpt> --out <dir>` (see [detector/README.md](detector/README.md)) |
 | Run occupancy's gate, or its UI, against this checkout's package | in a [rails49/occupancy](https://github.com/rails49/occupancy) checkout beside this one, `bin/with-detector.sh` (or `bin/with-detector.sh pnpm --filter @occupancy/ui dev`); it packs `../detector`, with the model if `detector/models/` holds one |
+| Build and deploy the Safari test page for #42 | see [bench/README.md](bench/README.md) |
 | Train the classifier (parked: no corpus) | run [classifier/resnet/TRAIN.ipynb](classifier/resnet/TRAIN.ipynb) (see [classifier/resnet/README.md](classifier/resnet/README.md)) |
 
 ## Releasing

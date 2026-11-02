@@ -37,6 +37,11 @@ dataset/data/
 dataset/yolo/
 dataset/r49/
 
+# The models, frames and ORT runtime the Safari test page serves, written by
+# detector/export_bench.py and bench/vite.config.ts.
+bench/public/data/
+bench/public/ort/
+
 # IDE files
 *.code-workspace
 
