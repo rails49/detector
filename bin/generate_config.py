@@ -124,6 +124,7 @@ def render_generated_ts(config: dict, r49: dict) -> str:
 
     detector_input = require(config, "detector", "input")
     canvas = require(config, "detector", "canvas")
+    target_dpt = require(config, "detector", "dpt")
     tile_overlap_mm = require(config, "detector", "tile_overlap_mm")
     confidence_threshold = require(config, "detector", "confidence_threshold")
     nms_iou = require(config, "detector", "nms_iou")
@@ -218,6 +219,12 @@ def render_generated_ts(config: dict, r49: dict) -> str:
         f"export const DETECTOR_CANVAS = {ts_literal(canvas)};",
         "",
         doc(
+            "The target DPT: every image is resampled to it before the detector",
+            "sees it, in training and at run time. A placeholder until #59.",
+        ),
+        f"export const DETECTOR_DPT = {ts_literal(target_dpt)};",
+        "",
+        doc(
             "Overlap between neighbouring tiles, in prototype mm. In pixels it is",
             "`DPT * DETECTOR_TILE_OVERLAP_MM / STANDARD_GAUGE`.",
         ),
@@ -306,6 +313,7 @@ def render_index_ts() -> str:
             "export {",
             "  DETECTOR_INPUT,",
             "  DETECTOR_CANVAS,",
+            "  DETECTOR_DPT,",
             "  DETECTOR_CONFIDENCE_THRESHOLD,",
             "  DETECTOR_NMS_IOU,",
             "  DETECTOR_VAL_SPLIT,",
