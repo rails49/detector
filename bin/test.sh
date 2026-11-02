@@ -33,7 +33,25 @@ fi
 
 STALE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/stale.XXXXXX")
 trap 'rm -rf "$STALE_DIR"' EXIT
-if ! uv run --quiet --with pyyaml python3 bin/generate_config.py --out-dir "$STALE_DIR" >/dev/null; then
+
+# detector.classes is append-only (ADR 0009), so the generator is handed
+# config.yaml as it was at the merge base with origin/main and refuses a class
+# list that does not start with that one. On main itself the base is HEAD.
+# Not skippable either: CI fetches full history so the merge base resolves.
+if ! MERGE_BASE=$(git merge-base HEAD origin/main); then
+  echo "❌ Could not find the merge base of HEAD and origin/main, which the"
+  echo "   append-only check on detector.classes compares against."
+  echo "   Run: git fetch origin main"
+  exit 1
+fi
+BASE_CONFIG="$STALE_DIR/base-config.yaml"
+if ! git show "$MERGE_BASE:config.yaml" >"$BASE_CONFIG"; then
+  echo "❌ Could not read config.yaml at the merge base $MERGE_BASE."
+  exit 1
+fi
+
+if ! uv run --quiet --with pyyaml python3 bin/generate_config.py \
+  --base-config "$BASE_CONFIG" --out-dir "$STALE_DIR" >/dev/null; then
   echo "❌ Could not regenerate config to verify it. See the error above."
   exit 1
 fi
