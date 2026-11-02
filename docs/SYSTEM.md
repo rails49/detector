@@ -33,6 +33,13 @@ training and testing, and is empty for now. The archives used today are ceiling
 captures in a local folder outside git (rails49/r49#51). `--in` takes any directory of `.r49`
 files.
 
+Training and `detect` resample with one filter. The export decodes each image
+to raw pixels and resizes those with sharp's default (`dataset/src/yolo_pixels.ts`);
+`resample` in the `@rails49/detector` root reproduces that resize in code,
+within 2 per channel, and `detect` uses it rather than the 2D canvas, whose
+filter each user agent picks (#7). Enlarging, which training never does,
+`resample` uses the same kernel with no training counterpart.
+
 `dataset/README.md` covers the export and its gates. `detector/README.md`
 covers training and export.
 
