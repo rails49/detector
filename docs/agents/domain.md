@@ -28,8 +28,7 @@ Each repository keeps its own wayfinder maps (label `wayfinder:map`). Here, #2 i
 │   └── research/        ← research notes cited by SPEC.md and the ADRs
 ├── lib/
 ├── dataset/
-├── detector/
-└── classifier/
+└── detector/
 ```
 
 ## Use the glossary's vocabulary

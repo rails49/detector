@@ -6,35 +6,25 @@ this is not.
 
 ## The pipeline
 
-Each directory is a stage in one data path. Two branches share one corpus: the
-detector path runs, and the classifier path is parked at its first arrow.
+Each directory is a stage in one data path.
 
 ```
 .r49 archives (rails49/r49)         v4: layout photos, calibration, labels
         │
-        ├── dataset/src/yolo_export.ts   labeled_complete gate, OBB spans
-        │       ▼
-        │   dataset/yolo/                canvas tiles; held-out test, then 80/20 by image
-        │       │  detector/train.py       YOLO26-OBB fine-tune from DOTA
-        │       ▼
-        │   detector/runs/.../best.pt  ── detector/evaluate.py: misses, phantoms on held-out frames
-        │       │                     ── detector/detect.py: detections drawn on an unlabeled archive
-        │       │  detector/export_onnx.py ONNX → static INT8 → .ort
-        │       ▼
-        │   detector/models/             detector_int8.ort (not in git)
-        │       │
-        │       └─▶ lib/detector/         loadDetector → L0
-        │               │
-        │               └─▶ occupancy's ui/   occupancy() → L1
-        │
-        └── parked: no crop derivation runs (rails49/occupancy#8, rails49/occupancy#18)
+        └── dataset/src/yolo_export.ts   labeled_complete gate, OBB spans
                 ▼
-            dataset/data/                144×144 crops, data.csv
-                │  classifier/resnet/TRAIN.ipynb   ResNet-18 → ONNX → ORT
+            dataset/yolo/                canvas tiles; held-out test, then 80/20 by image
+                │  detector/train.py       YOLO26-OBB fine-tune from DOTA
                 ▼
-            classifier/resnet/models/    model_int8.ort + config.json (not in git)
+            detector/runs/.../best.pt  ── detector/evaluate.py: misses, phantoms on held-out frames
+                │                     ── detector/detect.py: detections drawn on an unlabeled archive
+                │  detector/export_onnx.py ONNX → static INT8 → .ort
+                ▼
+            detector/models/             detector_int8.ort (not in git)
                 │
-                └─▶ nothing loads it (occupancy ADR 0004)
+                └─▶ lib/detector/         loadDetector → L0
+                        │
+                        └─▶ occupancy's ui/   occupancy() → L1
 ```
 
 The archives live in [`rails49/r49`](https://github.com/rails49/r49), not here
@@ -61,8 +51,7 @@ reads both and writes:
 
 `bin/test.sh` regenerates both into a temporary tree and fails on a
 difference. The generator fails, naming the class, when a `detector.classes`
-entry is not in the vocabulary (`lib/config/tests/generateConfig.test.ts`), and
-fails if `classifier.labels` reappears (rails49/occupancy#8). Given
+entry is not in the vocabulary (`lib/config/tests/generateConfig.test.ts`). Given
 `--base-config`, it also fails unless that config's `detector.classes` is a
 prefix of this one's; `bin/test.sh` passes `config.yaml` as it was at the merge
 base of `HEAD` and `origin/main`, so a reorder or a removal fails the gate
@@ -82,13 +71,11 @@ built to `dist/` and published from a tag (`README.md` § Releasing); the other
 | :--- | :--- |
 | `@detector/config` | `lib/config/src/index.ts` (generated) |
 | `@rails49/detector` | `lib/detector/src/index.ts` |
-| `@detector/classifier` | `lib/classifier/README.md` |
 
 ## Model files
 
 Model files are gitignored. Nothing under `detector/models/` is tracked: the
-package version names the model, and no model has been released. The
-classifier's `classifier/resnet/models/version.txt` is tracked.
+package version names the model, and no model has been released.
 `bin/test.sh` downloads no model.
 
 The detector package's build copies `detector/models/detector_int8.ort` into

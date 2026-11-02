@@ -76,10 +76,8 @@ export { DETECTOR_MODEL_FILE } from './model.ts';
 // corners to draw, and "derivable" is exactly how the width constant came to
 // be written twice in the first place.
 //
-// Withheld: a `./geometry` entry point. The classifier's split is load-bearing
-// — it keeps `onnxruntime-node` and `sharp` out of the browser bundle — but
-// pure geometry has no dependency to keep out of anything, so a third entry
-// point here would be ceremony. What is worth splitting is the ORT session,
+// Withheld: a `./geometry` entry point. Pure geometry has no dependency to
+// keep out of anything, so a third entry point here would be ceremony. What is worth splitting is the ORT session,
 // and that is `./browser`.
 //
 // Withheld: a `./node` entry point. Nothing needs node-side inference: the

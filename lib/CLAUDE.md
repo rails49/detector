@@ -4,7 +4,6 @@ All written in TypeScript. `detector` is built and published as
 `@rails49/detector`; the others are consumed as source. `dataset/` is the only
 consumer here; occupancy's UI depends on `detector`.
 
-* `classifier` : ONNX Runtime image classifier (browser and node targets)
 * `detector` : car boxes — the YOLO OBB session (browser), the L0 decode, and
   the span→box construction the exporter uses. L1 is in occupancy's UI
   (`ui/src/occupancy.ts`, [occupancy ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md))
@@ -19,8 +18,8 @@ a generator, and `bin/test.sh` regenerates into a temp tree and diffs, so a
 `config.yaml` edit without a regenerate fails the full check.
 
 The interface convention below holds for it too: the generator emits `index.ts`
-as a header of explicit named exports with a "Withheld" note, and the values
-with their TSDoc in a sibling `generated.ts`. Both carry a DO-NOT-EDIT banner.
+as a header of explicit named exports, and the values with their TSDoc in a
+sibling `generated.ts`. Both carry a DO-NOT-EDIT banner.
 If you need a new value exported, add it to the generator's
 `render_generated_ts` and `render_index_ts` — not to the output.
 
@@ -57,17 +56,7 @@ Three rules:
   bundle time. A `paths` entry — especially a wildcard one — would let deep
   imports typecheck cleanly and then fail only at build.
 
-* **A header cannot hide class members.** `BrowserClassifier` is exported, so
-  all of its public methods are public regardless of what `index.ts` says.
-  Narrowing a class's surface means `private`, `#field`, or deletion.
-
-* **`classifier` has three entry points, not one.** `.` carries only the config
-  type; `./browser` and `./node` carry the classifiers. The split is what keeps
-  `onnxruntime-node` and `sharp` out of the browser bundle, so it is load-
-  bearing, not stylistic.
-
-* **`detector` has two, and the second one is the same idea.** `.` is pure —
-  types, geometry, the tile layout and the two thresholds, importable from node, which is how
+* **`detector` has two entry points.** `.` is pure — types, geometry, the tile layout and the two thresholds, importable from node, which is how
   `dataset` gets `spanToPolygon` and occupancy's editor gets `MIN_DPT` without
   loading ORT — and `./browser` carries the ORT session. There is no
   `./geometry`: pure geometry has no dependency to keep out of anything, so a

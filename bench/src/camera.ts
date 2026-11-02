@@ -1,6 +1,6 @@
 import type { CameraRun } from './summary.js';
 
-/** What the page does with camera frames at 10 Hz, standing in for the classifier's input. */
+/** What the page does with camera frames at 10 Hz, standing in for the input of occupancy's sensor-patch classifier. */
 export type CameraLoad = 'none' | 'draw' | 'read';
 
 const LOAD_PERIOD_MS = 100;
