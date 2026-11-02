@@ -6,8 +6,7 @@ import {
   detectorClassIndex,
   spanCorners,
   spanToPolygon,
-  tileOrigins,
-  tileOverlapPx,
+  inputLayout,
 } from '@rails49/detector';
 import { getDPT, type ManifestData, type Point } from '@rails49/r49';
 
@@ -163,11 +162,10 @@ export async function planArchive(
     };
   }
   const outDpt = targetDpt ?? dpt;
-  const scale = outDpt / dpt;
   const widthPx = carWidthPx(outDpt);
-  const overlapPx = tileOverlapPx(outDpt);
   const frame = manifest.camera.resolution;
-  const size = { width: Math.round(frame.width * scale), height: Math.round(frame.height * scale) };
+  const layout = inputLayout(frame, dpt, outDpt);
+  const { scale, size } = layout;
 
   const images: ImagePlan[] = [];
   for (const image of manifest.images) {
@@ -230,29 +228,25 @@ export async function planArchive(
 
     const stem = outputStem(archiveName, filename);
     const tiles: TilePlan[] = [];
-    for (const y of tileOrigins(size.height, overlapPx)) {
-      for (const x of tileOrigins(size.width, overlapPx)) {
-        const width = Math.min(DETECTOR_CANVAS, size.width - x);
-        const height = Math.min(DETECTOR_CANVAS, size.height - y);
-        const tile = rectangle(x, y, width, height);
-        const lines: string[] = [];
-        let cornersClamped = 0;
-        for (const car of cars) {
-          if (convexIntersectionArea(car.corners, tile) === 0) continue;
-          const shifted = {
-            id: car.span.id,
-            p0: { x: car.span.p0.x - x, y: car.span.p0.y - y },
-            p1: { x: car.span.p1.x - x, y: car.span.p1.y - y },
-          };
-          // Clamped to the tile's pixels, then normalized against the canvas
-          // they are padded onto.
-          const box = spanToPolygon(shifted, widthPx, { width, height });
-          const corners = box.corners.map((c, i) => (c * (i % 2 === 0 ? width : height)) / DETECTOR_CANVAS);
-          cornersClamped += box.clamped;
-          lines.push(labelLine(car.classIndex, corners));
-        }
-        tiles.push({ stem: `${stem}__${x}_${y}`, x, y, width, height, lines, cornersClamped });
+    for (const { x, y, width, height } of layout.tiles) {
+      const tile = rectangle(x, y, width, height);
+      const lines: string[] = [];
+      let cornersClamped = 0;
+      for (const car of cars) {
+        if (convexIntersectionArea(car.corners, tile) === 0) continue;
+        const shifted = {
+          id: car.span.id,
+          p0: { x: car.span.p0.x - x, y: car.span.p0.y - y },
+          p1: { x: car.span.p1.x - x, y: car.span.p1.y - y },
+        };
+        // Clamped to the tile's pixels, then normalized against the canvas
+        // they are padded onto.
+        const box = spanToPolygon(shifted, widthPx, { width, height });
+        const corners = box.corners.map((c, i) => (c * (i % 2 === 0 ? width : height)) / DETECTOR_CANVAS);
+        cornersClamped += box.clamped;
+        lines.push(labelLine(car.classIndex, corners));
       }
+      tiles.push({ stem: `${stem}__${x}_${y}`, x, y, width, height, lines, cornersClamped });
     }
 
     images.push({

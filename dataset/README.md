@@ -23,8 +23,9 @@ directory). Both are gitignored. Point `--in` at a checkout of
 Its `archives/` is empty for now, and `--in` takes any directory of `.r49`
 files.
 
-`--dpt <n>` resamples every image to DPT `n`. Without it each image keeps its
-native DPT.
+Every image is resampled to the target DPT, `detector.dpt`; `--dpt <n>`
+resamples to DPT `n` instead. An archive whose native DPT is below it is fatal:
+training never upsamples.
 
 ```
 yolo/
@@ -48,7 +49,9 @@ The rules it applies are `SPEC.md` § YOLO annotations:
   The scale ratio cancels, so a car is 2.09 track-widths wide in every scale.
 * **Every image is cut into `detector.canvas` tiles** overlapping by
   `detector.tile_overlap_mm`, converted to pixels like car width. A frame
-  smaller than the canvas is one tile, padded on the right and bottom.
+  smaller than the canvas is one tile, padded on the right and bottom. The
+  positions are `inputLayout`'s, from `@rails49/detector`, which `detect` cuts
+  its input with too.
 * **The held-out images are named** in `holdout.json`, as `<archive id>/<filename>`,
   and go to `test`. The rest **split by image and by hash**, so re-exporting
   reshuffles nothing and two cars in one frame cannot land on opposite sides.

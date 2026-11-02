@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import sharp from 'sharp';
-import { DETECTOR_CANVAS, DETECTOR_CLASSES, DETECTOR_VAL_SPLIT } from '@detector/config';
+import { DETECTOR_CANVAS, DETECTOR_CLASSES, DETECTOR_DPT, DETECTOR_VAL_SPLIT } from '@detector/config';
 import { R49Archive } from '@rails49/r49';
 import { planArchive, type ImageDecoder, type Span, type Split, type TilePlan } from './yolo_rules.ts';
 
@@ -15,8 +15,9 @@ import { planArchive, type ImageDecoder, type Span, type Split, type TilePlan } 
  *     test/tiles.json
  *     data.yaml
  *
- * Each image is resampled to `--dpt` (its native DPT when absent) and cut into
- * `detector.canvas` tiles. The held-out images named in `holdout.json` go to
+ * Each image is resampled to `--dpt` (`detector.dpt` when absent) and cut into
+ * `detector.canvas` tiles at the positions `inputLayout` gives, the same ones
+ * `detect` cuts at run time. The held-out images named in `holdout.json` go to
  * `test`, and `test/tiles.json` records where each of their tiles sits in its
  * frame, with the frame's cars, so the evaluation can join tile detections
  * without recomputing the tiling.
@@ -36,7 +37,9 @@ const USAGE = `Usage: pnpm --filter dataset run export:yolo -- [--in <dir>] [--o
          (a checkout of https://github.com/rails49/r49 works as-is)
   --out  Dataset root to write. Default: ./yolo — gitignored, and replaced
          wholesale on every run.
-  --dpt  DPT to resample every image to. Default: each archive's native DPT.
+  --dpt  DPT to resample every image to. Default: detector.dpt (${DETECTOR_DPT}).
+         An archive whose native DPT is below it is fatal: training never
+         upsamples.
 `;
 
 const HOLDOUT = new URL('../holdout.json', import.meta.url);
@@ -44,13 +47,13 @@ const HOLDOUT = new URL('../holdout.json', import.meta.url);
 interface Options {
   readonly inDir: string;
   readonly outDir: string;
-  readonly dpt: number | undefined;
+  readonly dpt: number;
 }
 
 function parseArgs(argv: readonly string[]): Options {
   let inDir = 'r49';
   let outDir = 'yolo';
-  let dpt: number | undefined;
+  let dpt = DETECTOR_DPT;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -153,7 +156,7 @@ interface Tally {
 async function exportArchive(
   file: string,
   outDir: string,
-  dpt: number | undefined,
+  dpt: number,
   holdout: ReadonlySet<string>,
   tally: Tally
 ): Promise<void> {
