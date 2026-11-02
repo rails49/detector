@@ -1,8 +1,7 @@
 # Occupancy Dataset Preparation
 
-Tools for deriving training data from `.r49` railroad layout archives. One
-runs — the **detector** export. The two **classifier** scripts are parked and
-exit non-zero; the reasons are below and they are not defects to fix.
+Tools for deriving training data from `.r49` railroad layout archives: the
+**detector** export.
 
 ## Scripts
 
@@ -71,39 +70,6 @@ names every fatal image of an archive before writing any of it. The car box itse
 are `@rails49/detector`'s, so that the width constant has one home and occupancy's
 UI can draw ground truth beside detections without importing `node:crypto`.
 
-### `pnpm run prep` — ⚠️ PARKED (exits non-zero)
-
-It scanned a local `r49/` directory for archives and cut one 144×144 crop per point marker, tagged
-by the marker's type, split deterministically 80/20 by a hash of archive, image
-and marker id.
-
-v4 stores no point markers. A label is a **car** — a two-point span along the
-car's centerline — and a **sensor** is a per-layout query point, not a tagged
-sample. Deriving crops from car spans alone puts every crop centre on a car, so
-every crop earns the same tag: the vocabulary does not shrink from three tags to
-two, it collapses to **one, degenerate, with no negatives at all**. That is why
-`classifier.labels` was deleted from `config.yaml` rather than corrected.
-
-**The route back** is sampling background crops as *verified* negatives.
-`labeled_complete` asserts that no car in an image is unlabeled, which makes any
-crop centre intersecting no span a verified negative rather than a presumed one.
-That changes the negative distribution and so invalidates any gate built on the
-old one — it is an experiment to run, not a schema question to answer, and it
-stays dormant while the ResNet does.
-
-**Do not revive this by inventing a substitute vocabulary or synthesising
-negatives.** See `SPEC.md` § v4 cannot produce a trainable CNN dataset
-(issues rails49/occupancy#8, rails49/occupancy#18).
-
-### `pnpm run online-diagnostics` — ⚠️ PARKED (exits non-zero)
-
-It re-classified every marker with the exported model and printed a confusion
-matrix. Same cause: no markers, no per-marker ground-truth tag.
-
-It also measured nothing generalizable, having scored the same archives the
-model trained on. A replacement belongs to the held-out accuracy protocol that
-does not yet exist (`SPEC.md` § Accuracy).
-
 ## Directory Structure
 
 There are no `.r49` archives here any more (rails49/occupancy#63). The corpus,
@@ -118,9 +84,5 @@ local directory passed as `--in`.
     it). `data.yaml` names an absolute path, so it is machine-specific by
     construction — regenerate rather than copy it.
 *   `r49/`: The default `--in`, if you keep a corpus checkout here (gitignored).
-*   `data/`: The generated CNN crop database (gitignored; nothing generates it
-    today).
 *   `src/yolo_export.ts`, `src/yolo_rules.ts`: the detector export and its rules
     (the car box is `@rails49/detector`'s).
-*   `src/data_prep.ts`, `src/online_diagnostics.ts`: parked stubs carrying the
-    reasoning above.
