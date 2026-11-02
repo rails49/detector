@@ -38,7 +38,7 @@ jobs:
 
       # `bin/test.sh` hard-fails without uv, deliberately: regenerating
       # lib/config and diffing it is the one check it will not degrade to a
-      # warning. Python's own version comes from classifier/resnet/.python-version.
+      # warning. Python's own version comes from detector/.python-version.
       #
       # Pinned to an exact version, unlike the actions above: setup-uv publishes
       # no floating major tag, so `@v9` does not resolve. Bump it by hand.

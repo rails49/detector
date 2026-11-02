@@ -80,17 +80,8 @@ pnpm test
 # Run Python linting and formatting. uv is guaranteed present: the lib/config
 # gate above already hard-failed without it.
 echo "🐍 Running Python checks..."
-for project in classifier/resnet detector; do
-  echo "   $project"
-  (cd "$project" && uv sync --quiet && uv run ruff check . && uv run black --check . && uv run pyright)
-  # Only detector has tests, and only for one thing: the letterbox it writes a
-  # second copy of because the browser needs the same arithmetic in TypeScript
-  # (rails49/occupancy#100). Guarded by the directory rather than by project name so a
-  # tests/ tree added to the other one is picked up without editing this.
-  if [ -d "$project/tests" ]; then
-    (cd "$project" && uv run pytest -q)
-  fi
-done
+(cd detector && uv sync --quiet && uv run ruff check . && uv run black --check . && uv run pyright)
+(cd detector && uv run pytest -q)
 
 # The package as it ships, packed and installed alone.
 echo "📦 Checking @rails49/detector as packed..."

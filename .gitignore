@@ -13,11 +13,6 @@ __pycache__
 # Build artifacts
 dist/
 
-# Model files & build output — synced via GitHub Releases / deploy script,
-# see classifier/resnet/README.md
-classifier/resnet/models/*
-!classifier/resnet/models/version.txt
-
 # Detector weights and Ultralytics run output. The package version names the
 # model, so nothing under models/ is tracked. runs/ also holds the .pt
 # checkpoints, which are what training produces and what export_onnx.py consumes.
