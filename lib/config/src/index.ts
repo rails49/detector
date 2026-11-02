@@ -28,7 +28,6 @@ export {
 // The dataset exporter reads the class list and the split ratio.
 // @rails49/detector reads its own copy of generated.ts.
 export {
-  DETECTOR_INPUT,
   DETECTOR_CANVAS,
   DETECTOR_DPT,
   DETECTOR_CONFIDENCE_THRESHOLD,

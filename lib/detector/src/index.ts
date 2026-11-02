@@ -88,7 +88,7 @@ export { DETECTOR_MODEL_FILE } from './model.ts';
 // could pass while the real one fails. Add it when something wants to score a
 // corpus offline, not before.
 //
-// Withheld: `DETECTOR_CLASSES` and `DETECTOR_INPUT`. They are
+// Withheld: `DETECTOR_CLASSES`, `DETECTOR_CANVAS` and `DETECTOR_DPT`. They are
 // `@detector/config`'s, generated from `config.yaml`, and only this package
 // reads them; re-exporting them here would give them a second import path and
 // an implied second owner. The thresholds above are the exception because a

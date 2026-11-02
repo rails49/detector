@@ -1,5 +1,5 @@
 import { DETECTOR_CLASSES, DETECTOR_NMS_IOU } from './generated.ts';
-import { mapPoint, mapVector, type GridToReport } from './letterbox.ts';
+import { mapPoint, mapVector, type TileToReport } from './report.ts';
 import { boxCorners } from './geometry.ts';
 import { polygonIoU } from './overlap.ts';
 import type { Detection } from './types.ts';
@@ -7,13 +7,24 @@ import type { Detection } from './types.ts';
 /** Fields per slot in the end2end head's output: `(cx, cy, w, h, score, class, angle)`. */
 const STRIDE = 7;
 
+/** One tile's raw model output, with the map from that tile to the report frame. */
+export interface TileOutput {
+  /** The flat output buffer, `[1, slots, 7]` in tile pixels. */
+  readonly data: Float32Array;
+  /** Its dimensions, as ORT reports them. */
+  readonly dims: readonly number[];
+  /** Tile → report frame, from `tileToReport`. */
+  readonly map: TileToReport;
+}
+
 /**
- * Turn the model's raw output tensor into L0 detections in the report frame.
+ * Turn the model's raw output for every tile of a frame into L0 detections in
+ * the report frame.
  *
  * Separated from the ORT session so it can be driven by synthetic tensors: a
- * decode is where a wrong index or an unswapped axis hides, and none of that
- * needs a model file to catch. `browser.ts` supplies the real tensor; the tests
- * supply hand-built ones.
+ * decode is where a wrong index, an unswapped axis or a forgotten tile origin
+ * hides, and none of that needs a model file to catch. `browser.ts` supplies
+ * the real tensors; the tests supply hand-built ones.
  *
  * **Thresholding happens here, not downstream.** The export is `end2end: True`
  * with a fixed 300-slot buffer emitted every frame, mostly padding, so a
@@ -21,22 +32,26 @@ const STRIDE = 7;
  * unfiltered L0. SPEC calls this decoding, not filtering, for exactly that
  * reason — there is no version of L0 that skips it.
  *
- * @param data  The flat output buffer, `[1, slots, 7]` in model-grid pixels.
- * @param dims  Its dimensions, as ORT reports them.
- * @param map   Grid → report frame, from `gridToReport`.
+ * **Tiles are joined here too.** Neighbouring tiles overlap by more than the
+ * longest car, so a car in an overlap is seen by both. Each tile is decoded
+ * into the report frame first, and the duplicate suppression then runs over
+ * every tile's boxes at once, so one car is one detection whichever tiles saw
+ * it.
+ *
+ * @param tiles Every tile of one frame.
  * @param minConfidence Scores must exceed this, matching `export_onnx.py`'s
  *              strict `>` so the two agree on what a detection is.
- * @throws If the tensor is not the end2end head's `[1, n, 7]`, or if a slot
+ * @throws If a tensor is not the end2end head's `[1, n, 7]`, or if a slot
  *         names a class index outside `DETECTOR_CLASSES`. Both mean the model
  *         and the config have drifted apart, which puts every box somewhere
  *         wrong — loudly wrong beats subtly wrong.
  */
-export function decodeDetections(
-  data: Float32Array,
-  dims: readonly number[],
-  map: GridToReport,
-  minConfidence: number
-): Detection[] {
+export function decodeDetections(tiles: readonly TileOutput[], minConfidence: number): Detection[] {
+  return suppressDuplicates(tiles.flatMap(tile => decodeTile(tile, minConfidence)));
+}
+
+/** One tile's slots above the threshold, in the report frame, before suppression. */
+function decodeTile({ data, dims, map }: TileOutput, minConfidence: number): Detection[] {
   if (dims.length !== 3 || dims[0] !== 1 || dims[2] !== STRIDE) {
     throw new Error(
       `expected the end2end head's [1, n, ${STRIDE}] output, got [${dims.join(', ')}]. ` +
@@ -95,7 +110,7 @@ export function decodeDetections(
     });
   }
 
-  return suppressDuplicates(detections);
+  return detections;
 }
 
 /**
