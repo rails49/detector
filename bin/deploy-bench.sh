@@ -3,10 +3,16 @@ set -e
 
 # Build bench/ and upload it to its own Cloudflare Pages project.
 # Run detector/export_bench.py first; it writes bench/public/data/.
+# Run under 1Password: op run --env-file bin/deploy-bench.env -- bin/deploy-bench.sh
 cd "$(dirname "$0")/.."
 
 PROJECT_NAME="detector-bench"
 DEPLOY_DIR="bench/dist"
+
+if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+  echo "❌ Run under 1Password: op run --env-file bin/deploy-bench.env -- bin/deploy-bench.sh"
+  exit 1
+fi
 
 if [ ! -f bench/public/data/manifest.json ]; then
   echo "❌ bench/public/data/manifest.json is missing. Run detector/export_bench.py first (bench/README.md)."
@@ -23,8 +29,6 @@ if [ -n "$TOO_BIG" ]; then
   exit 1
 fi
 
-export CLOUDFLARE_API_TOKEN="op://rails49/Cloudflare Pages/credential"
-export CLOUDFLARE_ACCOUNT_ID="op://rails49/Cloudflare Pages/account_id"
-op run -- npx wrangler@3 pages project create "$PROJECT_NAME" --production-branch=main 2>/dev/null \
+npx wrangler@3 pages project create "$PROJECT_NAME" --production-branch=main 2>/dev/null \
   || echo "ℹ️  Project creation skipped or already exists."
-op run -- npx wrangler@3 pages deploy "$DEPLOY_DIR" --project-name="$PROJECT_NAME" --branch=main
+npx wrangler@3 pages deploy "$DEPLOY_DIR" --project-name="$PROJECT_NAME" --branch=main

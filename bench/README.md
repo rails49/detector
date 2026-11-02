@@ -29,7 +29,7 @@ uv run python export_bench.py --weights runs/n16/weights/best.pt \
 | Task | Command |
 | :--- | :--- |
 | Local, with COOP/COEP | `pnpm --filter @detector/bench dev` |
-| Deploy to Cloudflare Pages project `detector-bench` | `bin/deploy-bench.sh` |
+| Deploy to Cloudflare Pages project `detector-bench` | `op run --env-file bin/deploy-bench.env -- bin/deploy-bench.sh` |
 
 The runtime and the WASM thread count are URL parameters
 (`?runtime=webgpu&threads=4`); changing either reloads the page, because ORT
