@@ -27,9 +27,9 @@ uv run python train.py --epochs 20
 uv run python evaluate.py runs/tracer/weights/best.pt
 #    and the frames with their detections drawn, in runs/tracer/held-out/
 uv run python evaluate.py runs/tracer/weights/best.pt --draw runs/tracer/held-out
-#    in FP16, and in INT8 from an export at the training tile size
+#    in FP16, and in INT8 from the export, stopped before the .ort
 uv run python evaluate.py runs/tracer/weights/best.pt --fp16
-uv run python export_onnx.py --weights runs/tracer/weights/best.pt --canvas --out runs/tracer/int8
+uv run python export_onnx.py --weights runs/tracer/weights/best.pt --onnx-only --out runs/tracer/int8
 uv run python evaluate.py runs/tracer/int8/detector_int8.onnx --device cpu
 
 # a new capture before it is labeled: every image with its detections drawn
@@ -47,7 +47,7 @@ gitignored, exactly as `classifier/resnet/models/` is.
 **Quantize convolutions only.** Quantizing the whole graph yields a model that
 loads, runs, and returns the right `[1, 300, 7]` shape with **every score
 zero** — it detects nothing, and nothing errors. The head's last `Concat` fuses
-box coordinates (0..960) with scores (0..1) into one output tensor; a single
+box coordinates (0..canvas) with scores (0..1) into one output tensor; a single
 activation scale has to span both, it gets sized for the coordinates, and the
 whole score range lands in the zero bucket. `op_types_to_quantize=["Conv"]`
 leaves the head's plumbing in float and costs ~0.5 px of centre agreement
@@ -79,32 +79,20 @@ calibration frames and comparing detection counts. Loading, running and shape
 all pass on a model that detects nothing; only the comparison catches it. On
 the tracer weights: fp32 116, INT8 124, whole-graph-quantized **0**.
 
-**Calibration frames are letterboxed, because the browser's are.** Static
+**Calibration frames are the exported tiles, as exported.** Static
 quantization fixes its activation ranges on whatever geometry it is shown, so
-preprocessing them differently from the deployed path calibrates the model for a
-distribution it will never be given. `detector/letterbox.py` is therefore a
-second copy of `lib/detector/src/letterbox.ts` — deliberate duplication (issue
-rails49/occupancy#100): sharing nine lines of arithmetic across the language boundary would mean
-emitting a *function* from `config.yaml` or shelling out to node mid-quantize,
-and both cost more than the copy. `tests/test_letterbox.py` and
-`lib/detector/tests/decode.test.ts` assert the same scale and padding for the
-same inputs, which is what keeps them together. The fill is `(114, 114, 114)`,
-Ultralytics' own, which is what makes the bars in-distribution.
+calibrating on anything other than what `detect` feeds the model calibrates it
+for a distribution it is never given. `export:yolo` already writes each tile
+at the canvas square, resampled to the target DPT and padded on the right and
+bottom with `(114, 114, 114)`, Ultralytics' own fill — which is what `detect`
+builds in the browser from `inputLayout` (ADR 0014). So calibration reads the
+tiles unchanged and refuses one that is not the canvas square.
 
-It is worth 2 px of bar per edge on today's 1920x1080 corpus — the detection
-counts above went up from 106/115 when the probe frames stopped being stretched
-— and 42 px per edge at the intended capture geometry (§ Resolution below).
+## The input is one canvas tile
 
-## Resolution is chosen by geometry
-
-`detector.input` is `[960, 544]`, read from `config.yaml` by both scripts —
-Python reads the authored YAML directly and never the generated `lib/config`.
-
-640 is too small, and not because of the weight budget: at that input a track
-box lands ~6 px wide, under a single stride-8 P3 cell, so the smallest feature
-map cannot represent it. The 25 MiB Cloudflare ceiling is not the binding
-constraint here — the INT8 `.ort` comes in around 3.3 MiB, an eighth of it.
-
-The rectangular shape is applied at **export**, not during training:
-Ultralytics trains at a single square `imgsz` and letterboxes to it, while the
-exported graph is what gets deployed.
+The exported graph takes `[1, 3, canvas, canvas]`, `detector.canvas` from
+`config.yaml`, read by both scripts — Python reads the authored YAML directly
+and never the generated `lib/config`. `export_onnx.py` checks the graph it
+wrote has that input, and `loadDetector` refuses any other. A frame is
+resampled to the target DPT, `detector.dpt`, and cut into tiles of that
+square, in training and in the browser alike. See `SPEC.md` § Input geometry.

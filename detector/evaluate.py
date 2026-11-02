@@ -19,7 +19,7 @@ midpoint in green, phantoms in red, each with its confidence. A found car's
 midpoint is a yellow dot; a missed car's span and midpoint are magenta.
 
 `--fp16` runs the PyTorch model in FP16. An INT8 model is the static INT8
-ONNX file `export_onnx.py --canvas` writes, scored with `--device cpu` in ONNX
+ONNX file `export_onnx.py --onnx-only` writes, scored with `--device cpu` in ONNX
 Runtime.
 
 Usage:
