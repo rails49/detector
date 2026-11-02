@@ -117,7 +117,7 @@ The vocabulary is what the context menu offers and what a label's `class` must m
 
 The `stock.` root is required rather than cosmetic: a new car is `stock` and refinements must roll up to it, so an unrooted class would match no entry and be dropped from the export — the unlabeled-car-as-background failure [Labeling completeness](https://github.com/rails49/occupancy/blob/main/SPEC.md#labeling-completeness) exists to prevent. The root never appears in the UI; the context menu renders its children.
 
-**`config.yaml` is authored; every other representation is generated and verified.** Exports assert against it and abort on mismatch, and nothing writes a vocabulary back — which is why `classifier.labels` was deleted rather than corrected, being a key nothing could check. TypeScript reaches these values through a **generated, committed** `lib/config` package emitted by `pnpm config:generate`, with a staleness check in `bin/test.sh`; `@rails49/r49` reads the gauge, the scale-to-ratio table, its scale enum and the vocabulary from its own data file, not from `lib/config`. Python reads `config.yaml` directly, and the package's data file for the gauge.
+**`config.yaml` is authored; every other representation is generated and verified.** Exports assert against it and abort on mismatch, and nothing writes a vocabulary back. TypeScript reaches these values through a **generated, committed** `lib/config` package emitted by `pnpm config:generate`, with a staleness check in `bin/test.sh`; `@rails49/r49` reads the gauge, the scale-to-ratio table, its scale enum and the vocabulary from its own data file, not from `lib/config`. Python reads `config.yaml` directly, and the package's data file for the gauge.
 
 The detector runs entirely in the browser via ONNX Runtime; the application is fully client-side with no backend.
 
@@ -137,21 +137,6 @@ Built in `dataset/src/yolo_export.ts`.
 * Images are resampled to the target DPT, then padded onto the canvas and never resized ([ADR 0014](docs/adr/0014-dpt-normalized-input-padded-never-resized.md)). With no target the image keeps its native DPT. Resampling never goes up: an archive below the target DPT is fatal.
 * A capture larger than the canvas is tiled, with overlap longer than the longest car. The first tile starts at the frame's edge and the last ends at the opposite edge, with the rest spaced evenly between. A car cut by a tile boundary is clipped and labeled, not dropped. Dropping it would teach the model that part of a car is not a car, and so blind it to a car half outside the camera's frame, which no overlap can fix.
 * The held-out images named in `dataset/holdout.json` go to a `test` split, and the same images measure every model compared against one another. The rest split into train and validation by a hash of the image.
-
-### CNN crops, for the classifier
-
-Kept because the ResNet stays retrainable. Nothing loads it today.
-
-* Fixed stride along the span, in canonical 20-DPT pixels, endpoint-inclusive and deterministic: `s = crop_size / 2 = 48`.
-* Crops stay axis-aligned whatever the span's orientation. At inference the classifier only receives a query point, a `layout.sensors` entry, never an orientation, so a rotated training crop would not match what it is asked.
-* A crop's labels come from every span intersecting it, not only the span that generated it. This is why the format needs no occlusion rule.
-* Projects ~2718 crops against 959 today.
-
-### v4 cannot produce a trainable CNN dataset, and that is known
-
-Established in [rails49/occupancy#8](https://github.com/rails49/occupancy/issues/8). v4 stores only car spans, so every derivable crop centre lies on a car and every crop gets the same tag. The vocabulary collapses to one tag with no negatives. This is why `classifier.labels` was deleted from `config.yaml`.
-
-The route back is to sample background crops as verified negatives. `labeled_complete` asserts no car is unlabeled, so a crop centre that meets no span is a verified negative. That changes the negative distribution and invalidates any gate built on the old one, so it is an experiment to run, and it stays dormant while the ResNet does. Until then the CNN derivation above has no corpus to run on.
 
 ---
 

@@ -1,9 +1,7 @@
 # Detector — YOLO26n-OBB
 
 Fine-tunes an oriented-box detector on rolling stock and exports it for the
-browser. Sibling of `classifier/resnet/`, with its own `uv` environment — **do
-not merge the two**: each locks its own torch against its own framework
-(fastai there, Ultralytics here).
+browser, in its own `uv` environment.
 
 No model has been released. The corpus is
 [`rails49/r49`](https://github.com/rails49/r49)'s `archives/`, which is empty
@@ -40,7 +38,7 @@ uv run python export_onnx.py
 ```
 
 `train.py` writes to `runs/`, `export_onnx.py` to `models/`. Both are
-gitignored, exactly as `classifier/resnet/models/` is.
+gitignored.
 
 ## Three export findings that are easy to rediscover the hard way
 

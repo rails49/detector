@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 The detector side of [rails49/occupancy](https://github.com/rails49/occupancy):
-training-data export, YOLO and CNN training, and the browser runtime that runs
-the detector.
+training-data export, YOLO training, and the browser runtime that runs the
+detector.
 
 The detector sometimes misses rolling stock or reports phantom trains. Present
 nothing here as a safety interlock.
@@ -34,9 +34,6 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
   A format change is a release in `rails49/r49`, then a bump here (org [ADR-0022](https://github.com/rails49/.github/blob/main/docs/adr/0022-the-r49-format-is-r49s-and-each-consumer-pins-it.md)).
 - `config.json` and `lib/config/src/` are generated. Edit `config.yaml` and run
   `pnpm config:generate`. `detector.classes` is append-only (ADR 0009).
-- `dataset/src/data_prep.ts` and `dataset/src/online_diagnostics.ts` stay
-  parked stubs. v4 stores no point markers; see `SPEC.md` § v4 cannot produce a
-  trainable CNN dataset.
 - The model filename is written only in `lib/detector`: its `./model` exports
   entry and `DETECTOR_MODEL_FILE` (`lib/detector/tests/model.test.ts`).
   Occupancy's UI resolves the entry and imports the constant.
@@ -52,10 +49,6 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
   `dataset/holdout.json` holds out. No number from these images predicts
   accuracy (`SPEC.md` § Accuracy). There is no automated model gate, and no
   substitute for one (ADR 0007).
-- One model is in occupancy's live path, and the classifier is parked
-  ([occupancy ADR 0004](https://github.com/rails49/occupancy/blob/main/docs/adr/0004-one-model-in-the-live-path.md)).
-- `@detector/classifier` keeps its three entry points, so `onnxruntime-node`
-  and `sharp` stay out of browser bundles.
 - Import `onnxruntime-web/wasm`, never the package root
   ([occupancy ADR 0006](https://github.com/rails49/occupancy/blob/main/docs/adr/0006-the-onnx-runtime-ships-from-origin.md)).
 

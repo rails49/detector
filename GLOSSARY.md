@@ -30,7 +30,7 @@ The model that finds cars in a frame: an oriented-box YOLO network. See [SPEC §
 _Avoid_: sensor, classifier
 
 **Classifier**:
-The CNN that judges occupancy at a single point. See [occupancy ADR 0004](https://github.com/rails49/occupancy/blob/main/docs/adr/0004-one-model-in-the-live-path.md).
+Occupancy's term, defined in [occupancy's GLOSSARY.md](https://github.com/rails49/occupancy/blob/main/GLOSSARY.md).
 
 **Detection**:
 One car the detector found: an oriented box, a class and a confidence. See [SPEC § The runtime reports detections](SPEC.md#the-runtime-reports-detections-in-the-callers-frame).

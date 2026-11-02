@@ -2,8 +2,8 @@
 
 The detector side of [rails49 occupancy](https://github.com/rails49/occupancy),
 which detects track occupancy on a model railroad from an overhead camera. This
-repository holds the training-data export, YOLO and CNN training, the models,
-and the browser runtime that runs the detector. The UI, the live view and the
+repository holds the training-data export, YOLO training, the model, and the
+browser runtime that runs the detector. The UI, the live view and the
 deploy are in occupancy.
 
 **WARNING**: The detector sometimes misses rolling stock and sometimes reports
@@ -30,13 +30,12 @@ noted.
 | All TS tests | `pnpm test` |
 | Tests for one package | `pnpm --filter @rails49/detector test` |
 | Regenerate `config.json` and `lib/config` | `pnpm config:generate` |
-| Python lint, format, types | `cd <classifier/resnet\|detector> && uv run ruff check . && uv run black --check . && uv run pyright` |
+| Python lint, format, types | `cd detector && uv run ruff check . && uv run black --check . && uv run pyright` |
 | Derive the detector dataset | `pnpm --filter dataset run export:yolo -- --in <dir> [--dpt <n>]` (writes `dataset/yolo/`; see [dataset/README.md](dataset/README.md)) |
 | Fine-tune, measure and export the detector | `cd detector && uv run python train.py --epochs 20 && uv run python evaluate.py runs/tracer/weights/best.pt && uv run python export_onnx.py` (see [detector/README.md](detector/README.md)) |
 | Draw a model's detections on a new, unlabeled archive | `cd detector && uv run python detect.py runs/<name>/weights/best.pt <archive.r49> --dpt <dpt> --out <dir>` (see [detector/README.md](detector/README.md)) |
 | Run occupancy's gate, or its UI, against this checkout's package | in a [rails49/occupancy](https://github.com/rails49/occupancy) checkout beside this one, `bin/with-detector.sh` (or `bin/with-detector.sh pnpm --filter @occupancy/ui dev`); it packs `../detector`, with the model if `detector/models/` holds one |
 | Build and deploy the Safari test page for #42 | see [bench/README.md](bench/README.md) |
-| Train the classifier (parked: no corpus) | run [classifier/resnet/TRAIN.ipynb](classifier/resnet/TRAIN.ipynb) (see [classifier/resnet/README.md](classifier/resnet/README.md)) |
 
 ## Releasing
 
