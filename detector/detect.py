@@ -11,8 +11,8 @@ each with its confidence.
 
 Usage:
     uv run python detect.py runs/ceiling-l/weights/best.pt \\
-        ~/rails49/data/ceiling-2026-10-29/ceiling-2026-10-29.r49 --dpt 32.55 \\
-        --out ~/rails49/data/ceiling-2026-10-29/detections-ceiling-l
+        ~/rails49/r49/archives/iot49/ceiling-2026-10-29.r49 --dpt 32.55 \\
+        --out runs/ceiling-l/detections
 """
 
 from __future__ import annotations

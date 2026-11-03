@@ -19,8 +19,8 @@ and is **replaced wholesale** on every run (it refuses to delete a directory
 that holds no `data.yaml`, so a mistyped `--out` cannot eat your home
 directory). Both are gitignored. Point `--in` at a checkout of
 [`rails49/r49`](https://github.com/rails49/r49); the labels live there, not here.
-Its `archives/` is empty for now, and `--in` takes any directory of `.r49`
-files.
+Its `archives/iot49/` holds the ceiling captures, and `--in` takes any
+directory of `.r49` files.
 
 Every image is resampled to the target DPT, `detector.dpt`; `--dpt <n>`
 resamples to DPT `n` instead. An archive whose native DPT is below it is fatal:
@@ -77,9 +77,8 @@ UI can draw ground truth beside detections without importing `node:crypto`.
 There are no `.r49` archives here any more (rails49/occupancy#63). The corpus,
 for training and testing, is the `archives/<handle>/<slug>.r49` tree of
 [`rails49/r49`](https://github.com/rails49/r49), which takes submissions by pull
-request under CC BY 4.0. That tree is empty for now. The archives used today
-are ceiling captures in a local folder outside git (rails49/r49#51). No number derived from them
-predicts model accuracy (`SPEC.md` § Accuracy). Training reads archives from a
+request under CC BY 4.0. It holds the ceiling captures, in `archives/iot49/`.
+No number derived from them predicts model accuracy (`SPEC.md` § Accuracy). Training reads archives from a
 local directory passed as `--in`.
 
 *   `yolo/`: The generated detector dataset (gitignored; `export:yolo` writes

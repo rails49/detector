@@ -4,8 +4,8 @@ Fine-tunes an oriented-box detector on rolling stock and exports it for the
 browser, in its own `uv` environment.
 
 No model has been released. The corpus is
-[`rails49/r49`](https://github.com/rails49/r49)'s `archives/`, which is empty
-for now; the current model trains on ceiling captures kept locally, outside git.
+[`rails49/r49`](https://github.com/rails49/r49)'s `archives/`; the current model
+trains on the ceiling captures in its `archives/iot49/`.
 No number this produces is a generalization estimate (`SPEC.md` § Accuracy).
 When a model is released, the package version names it.
 
@@ -15,8 +15,8 @@ When a model is released, the package version names it.
 # 0. the corpus, and the dataset derived from it
 git clone https://github.com/rails49/r49.git ../dataset/r49
 pnpm --filter dataset run export:yolo
-#    r49's archives/ is empty for now: add `-- --in <dir>` for any directory of
-#    .r49 files, relative to dataset/
+#    add `-- --in <dir>` for any other directory of .r49 files, relative to
+#    dataset/
 
 # 1. fine-tune from the DOTA-pretrained OBB checkpoint
 uv run python train.py --epochs 20
