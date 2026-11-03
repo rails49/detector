@@ -1,0 +1,254 @@
+[
+ {
+  "model": "yolo26n-obb nc=1",
+  "params": 2647524,
+  "params_fused": 2446602,
+  "sizes": {
+   "640": {
+    "ultra_gflops_unfused": 6.387328,
+    "ultra_gflops_fused": 5.5552128,
+    "own_gmacs_conv": 2.7161664,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.06144
+   },
+   "1024": {
+    "ultra_gflops_unfused": 16.842293248,
+    "ultra_gflops_fused": 14.712078336,
+    "own_gmacs_conv": 6.953385984,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.402653184
+   },
+   "2048": {
+    "ultra_gflops_unfused": 77.032849408,
+    "ultra_gflops_fused": 68.51198976,
+    "own_gmacs_conv": 27.813543936,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 6.442450944
+   }
+  }
+ },
+ {
+  "model": "yolo26s-obb nc=1",
+  "params": 10520996,
+  "params_fused": 9751554,
+  "sizes": {
+   "640": {
+    "ultra_gflops_unfused": 24.7104,
+    "ultra_gflops_fused": 21.7444608,
+    "own_gmacs_conv": 10.7493504,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.12288
+   },
+   "1024": {
+    "ultra_gflops_unfused": 64.240091136,
+    "ultra_gflops_fused": 56.647286784,
+    "own_gmacs_conv": 27.518337024,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.805306368
+   },
+   "2048": {
+    "ultra_gflops_unfused": 276.287717376,
+    "ultra_gflops_fused": 245.916499968,
+    "own_gmacs_conv": 110.073348096,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 12.884901888
+   }
+  }
+ },
+ {
+  "model": "yolo26m-obb nc=1",
+  "params": 23472100,
+  "params_fused": 21198674,
+  "sizes": {
+   "640": {
+    "ultra_gflops_unfused": 82.3477248,
+    "ultra_gflops_fused": 71.77344,
+    "own_gmacs_conv": 35.76384,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.12288
+   },
+   "1024": {
+    "ultra_gflops_unfused": 211.791642624,
+    "ultra_gflops_fused": 184.721473536,
+    "own_gmacs_conv": 91.5554304,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.805306368
+   },
+   "2048": {
+    "ultra_gflops_unfused": 866.493923328,
+    "ultra_gflops_fused": 758.213246976,
+    "own_gmacs_conv": 366.2217216,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 12.884901888
+   }
+  }
+ },
+ {
+  "model": "yolo26l-obb nc=1",
+  "params": 27875556,
+  "params_fused": 25594962,
+  "sizes": {
+   "640": {
+    "ultra_gflops_unfused": 100.8708608,
+    "ultra_gflops_fused": 90.1433856,
+    "own_gmacs_conv": 44.8873728,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.18432
+   },
+   "1024": {
+    "ultra_gflops_unfused": 259.701604352,
+    "ultra_gflops_fused": 232.23926784,
+    "own_gmacs_conv": 114.911674368,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 1.207959552
+   },
+   "2048": {
+    "ultra_gflops_unfused": 1067.797446656,
+    "ultra_gflops_fused": 957.948100608,
+    "own_gmacs_conv": 459.646697472,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 19.327352832
+   }
+  }
+ },
+ {
+  "model": "yolo26x-obb nc=1",
+  "params": 62629188,
+  "params_fused": 57543282,
+  "sizes": {
+   "640": {
+    "ultra_gflops_unfused": 225.6732672,
+    "ultra_gflops_fused": 202.2043392,
+    "own_gmacs_conv": 100.8256896,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.27648
+   },
+   "1024": {
+    "ultra_gflops_unfused": 579.931865088,
+    "ultra_gflops_fused": 519.851409408,
+    "own_gmacs_conv": 258.113765376,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 1.811939328
+   },
+   "2048": {
+    "ultra_gflops_unfused": 2363.214004224,
+    "ultra_gflops_fused": 2122.892181504,
+    "own_gmacs_conv": 1032.455061504,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 28.991029248
+   }
+  }
+ },
+ {
+  "model": "yolo26n-obb nc=80",
+  "params": 2715614,
+  "params_fused": 2480503,
+  "sizes": {
+   "640": {
+    "ultra_gflops_unfused": 6.7347968,
+    "ultra_gflops_fused": 5.7257216,
+    "own_gmacs_conv": 2.8014208,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.06144
+   },
+   "1024": {
+    "ultra_gflops_unfused": 17.731813376,
+    "ultra_gflops_fused": 15.148580864,
+    "own_gmacs_conv": 7.171637248,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.402653184
+   },
+   "2048": {
+    "ultra_gflops_unfused": 80.59092992,
+    "ultra_gflops_fused": 70.257999872,
+    "own_gmacs_conv": 28.686548992,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 6.442450944
+   }
+  }
+ },
+ {
+  "model": "yolo26l-obb nc=80",
+  "params": 27997374,
+  "params_fused": 25655871,
+  "sizes": {
+   "640": {
+    "ultra_gflops_unfused": 101.5503872,
+    "ultra_gflops_fused": 90.4831488,
+    "own_gmacs_conv": 45.0572544,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.18432
+   },
+   "1024": {
+    "ultra_gflops_unfused": 261.441191936,
+    "ultra_gflops_fused": 233.109061632,
+    "own_gmacs_conv": 115.346571264,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 1.207959552
+   },
+   "2048": {
+    "ultra_gflops_unfused": 1074.755796992,
+    "ultra_gflops_fused": 961.427275776,
+    "own_gmacs_conv": 461.386285056,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 19.327352832
+   }
+  }
+ },
+ {
+  "model": "/Users/boser/rails49/detector/detector/yolo26l-obb.pt",
+  "params": 27897144,
+  "params_fused": 25605756,
+  "sizes": {
+   "640": {
+    "ultra_gflops_unfused": 100.9912832,
+    "ultra_gflops_fused": 90.2035968,
+    "own_gmacs_conv": 44.9174784,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.18432
+   },
+   "1024": {
+    "ultra_gflops_unfused": 260.009885696,
+    "ultra_gflops_fused": 232.393408512,
+    "own_gmacs_conv": 114.988744704,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 1.207959552
+   },
+   "2048": {
+    "ultra_gflops_unfused": 1069.030572032,
+    "ultra_gflops_fused": 958.564663296,
+    "own_gmacs_conv": 459.954978816,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 19.327352832
+   }
+  }
+ },
+ {
+  "model": "/Users/boser/rails49/detector/detector/yolo26x-obb.pt",
+  "params": 62661528,
+  "params_fused": 57559452,
+  "sizes": {
+   "640": {
+    "ultra_gflops_unfused": 225.8539008,
+    "ultra_gflops_fused": 202.294656,
+    "own_gmacs_conv": 100.870848,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 0.27648
+   },
+   "1024": {
+    "ultra_gflops_unfused": 580.394287104,
+    "ultra_gflops_fused": 520.082620416,
+    "own_gmacs_conv": 258.22937088,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 1.811939328
+   },
+   "2048": {
+    "ultra_gflops_unfused": 2365.063692288,
+    "ultra_gflops_fused": 2123.817025536,
+    "own_gmacs_conv": 1032.91748352,
+    "own_gmacs_linear": 0.0,
+    "own_gmacs_attn": 28.991029248
+   }
+  }
+ }
+]
