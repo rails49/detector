@@ -22,7 +22,7 @@ box. The page loads only the first frame in the manifest.
 ```sh
 cd detector
 uv run python export_bench.py --weights runs/n16/weights/best.pt \
-  --archive ~/rails49/data/ceiling-2026-10-28/ceiling-2026-10-28.r49 --native-dpt 32.6
+  --archive ~/rails49/r49/archives/iot49/ceiling-2026-10-28.r49 --native-dpt 32.6
 ```
 
 ## Run and deploy
