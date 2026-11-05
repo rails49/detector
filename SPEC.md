@@ -12,13 +12,15 @@ Settled in [rails49/occupancy#3](https://github.com/rails49/occupancy/issues/3) 
 | Head | Oriented bounding box; NMS-free, exported `end2end: True` |
 | Output tensor | `[1, 300, 7]`, a fixed 300-slot buffer every frame |
 | Input | one square canvas at constant DPT (see [Input geometry](#input-geometry-is-dpt-normalized)) |
-| Quantization | static INT8 |
-| Shipped artifact | `.ort`, 3.30 MiB measured, against the 25 MiB Cloudflare Pages limit |
-| Runtime | `onnxruntime-web`, WASM execution provider |
+| Browser quantization | static INT8 |
+| Browser artifact | `.ort`, 3.30 MiB measured, against the 25 MiB Cloudflare Pages limit |
+| Browser runtime | `onnxruntime-web`, WASM execution provider |
+| Service artifact | `detector.onnx`, FP32, with [its JSON file](#the-json-file-beside-a-model) |
+| Service runtime | [`rails49-detector`](#the-python-runtime), on onnxruntime or OpenVINO |
 
 The oriented head is required. [The occupancy test](https://github.com/rails49/occupancy/blob/main/SPEC.md#the-occupancy-test) is a point inside the car's own oriented box, so orientation is an output the model must produce. It costs 2.5% in model size and about 1% in FLOPs.
 
-Quantization must be static INT8. Dynamic quantization emits `ConvInteger`, which the CPU execution provider does not implement. Static quantization needs calibration data; ten corpus images were enough. FP16 does not help on a CPU or WASM target.
+Browser quantization must be static INT8. Dynamic quantization emits `ConvInteger`, which the CPU execution provider does not implement. Static quantization needs calibration data; ten corpus images were enough. FP16 does not help on a CPU or WASM target.
 
 The training and export pipeline lives in `detector/`.
 
@@ -76,6 +78,22 @@ A car's width in pixels is `DPT × standard_width / standard_gauge` (`carWidthPx
 
 `length` is the long axis and `width` the short one. `width` is the model's own prediction, not the car width, so a consumer sees what the model said. Which frame to report in is the caller's choice: occupancy reports L0 in `camera.resolution` ([occupancy SPEC § Output encoding](https://github.com/rails49/occupancy/blob/main/SPEC.md#output-encoding)).
 
+### The Python runtime
+
+`rails49-detector` (`lib/detector-py`, imported as `detector`) is the runtime for the occupancy service. It has no Torch. `Detector(model_path, engine="onnxruntime", device=None)` loads a model, `detect(frame, dpt)` takes a frame (height × width × RGB, 8 bits) and its DPT and returns L0 in that frame's pixels, and `car_width_px(dpt)` returns the car width. Each detection has the fields above, under those names, with `centre` as `x` and `y`.
+
+It follows `@rails49/detector`: the input layout, tiles padded on the right and bottom with level 114, values scaled to `0…1`, one model run per tile, a strict `>` on the threshold, the long axis as `length`, and duplicate removal across all tiles at once, class-agnostic and ordered by confidence. The two share the cases in `conformance/`.
+
+Reducing goes through `pyvips` with Lanczos3 and gap 2, then sharp's centre crop, and is within 2 per channel of sharp. Enlarging goes through the same call and only has to be deterministic, because training never enlarges.
+
+It refuses a model whose input is not the canvas square, an output that is not `[1, n, 7]`, a class index outside the list, a frame of another shape or type, and a DPT that is not positive. `engine` is `"onnxruntime"` or, with the `openvino` extra, `"openvino"`. `device` is an OpenVINO device name, `"CPU"` when not given; onnxruntime refuses one. Only the chosen engine is imported. OpenVINO runs at f32 on every device, so that the two engines agree.
+
+Whether a model is good enough to release stays a person's call ([ADR 0007](docs/adr/0007-no-automated-model-gate.md)).
+
+### The JSON file beside a model
+
+`export_onnx.py` writes `<model stem>.json` beside each model it produces, and every value the Python runtime uses comes from it: `canvas`, `dpt`, `tile_overlap_mm`, `confidence_threshold`, `nms_iou`, `classes`, `standard_width` and `standard_gauge`. The occupancy service loads the FP32 `detector.onnx` that `--float` stops at, and its `detector.json`.
+
 ### Licensing: the project is AGPL-3.0
 
 The project and its trained weights are AGPL-3.0, because the detector is fine-tuned from AGPL weights ([ADR 0003](docs/adr/0003-agpl-because-the-detector-is-fine-tuned-from-agpl-weights.md), [rails49/occupancy#10](https://github.com/rails49/occupancy/issues/10)). The change is forward-only: the earlier MIT snapshot stays MIT. There is still no CLA and no contributor gate. If the detector family changes, the licence is reconsidered.
@@ -119,7 +137,7 @@ The `stock.` root is required rather than cosmetic: a new car is `stock` and ref
 
 **`config.yaml` is authored; every other representation is generated and verified.** Exports assert against it and abort on mismatch, and nothing writes a vocabulary back. TypeScript reaches these values through a **generated, committed** `lib/config` package emitted by `pnpm config:generate`, with a staleness check in `bin/test.sh`; `@rails49/r49` reads the gauge, the scale-to-ratio table, its scale enum and the vocabulary from its own data file, not from `lib/config`. Python reads `config.yaml` directly, and the package's data file for the gauge.
 
-The detector runs entirely in the browser via ONNX Runtime; the application is fully client-side with no backend.
+The detector runs through ONNX Runtime in the browser, and through onnxruntime or OpenVINO in the occupancy service.
 
 ## Deriving Training Data
 

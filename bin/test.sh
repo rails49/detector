@@ -83,10 +83,20 @@ echo "🐍 Running Python checks..."
 (cd detector && uv sync --quiet && uv run ruff check . && uv run black --check . && uv run pyright)
 (cd detector && uv run pytest -q)
 
+echo "🐍 Running the rails49-detector checks..."
+(cd lib/detector-py && uv sync --locked --all-extras --quiet && uv run ruff check . && uv run black --check . && uv run pyright)
+(cd lib/detector-py && uv run pytest -q)
+
 # The package as it ships, packed and installed alone.
 echo "📦 Checking @rails49/detector as packed..."
 PACKAGE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/package.XXXXXX")
 trap 'rm -rf "$STALE_DIR" "$PACKAGE_DIR"' EXIT
 bin/check-package.sh "$PACKAGE_DIR"
+
+# rails49-detector as it ships, built and installed alone.
+echo "📦 Checking rails49-detector as built..."
+WHEEL_DIR=$(mktemp -d "${TMPDIR:-/tmp}/wheel.XXXXXX")
+trap 'rm -rf "$STALE_DIR" "$PACKAGE_DIR" "$WHEEL_DIR"' EXIT
+bin/check-wheel.sh "$WHEEL_DIR"
 
 echo "🎉 All checks passed successfully!"

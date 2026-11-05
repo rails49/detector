@@ -1,0 +1,635 @@
+{
+  "tolerance": 1e-09,
+  "cases": [
+    {
+      "name": "the padding slots of the fixed buffer are dropped",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "slots": 300,
+          "rows": [
+            [15, 10, 12, 4, 0.9, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.8999999761581421
+        }
+      ]
+    },
+    {
+      "name": "the threshold is strict",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [5, 5, 8, 2, 0.25, 0, 0],
+            [25, 15, 8, 2, 0.26, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 25.0, "y": 15.0 },
+          "length": 8.0,
+          "width": 2.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.25999999046325684
+        }
+      ]
+    },
+    {
+      "name": "a float32 score is compared with the threshold as a double",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "threshold": 0.1,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.1, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.10000000149011612
+        }
+      ]
+    },
+    {
+      "name": "the long axis is length, whichever axis the head put it on",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 4, 12, 0.9, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 1.5707963267948966,
+          "class": "stock",
+          "confidence": 0.8999999761581421
+        }
+      ]
+    },
+    {
+      "name": "the angle arrives in radians from +x",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.9, 0, 0.5235987755982988]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 11.999999999999998,
+          "width": 4.0,
+          "angle": 0.5235987901687623,
+          "class": "stock",
+          "confidence": 0.8999999761581421
+        }
+      ]
+    },
+    {
+      "name": "a class index selects from the list",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.9, 1, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock.loco",
+          "confidence": 0.8999999761581421
+        }
+      ]
+    },
+    {
+      "name": "a class value ending in .5 rounds up",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.9, 0.5, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock.loco",
+          "confidence": 0.8999999761581421
+        }
+      ]
+    },
+    {
+      "name": "a reduced frame is reported in its own pixels",
+      "frame": { "width": 60, "height": 40 },
+      "dpt": 32,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.9, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 30.0, "y": 20.0 },
+          "length": 24.0,
+          "width": 8.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.8999999761581421
+        }
+      ]
+    },
+    {
+      "name": "an enlarged frame is reported in its own pixels",
+      "frame": { "width": 15, "height": 10 },
+      "dpt": 8,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.9, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 7.5, "y": 5.0 },
+          "length": 6.0,
+          "width": 2.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.8999999761581421
+        }
+      ]
+    },
+    {
+      "name": "the axes scale apart when the sizes round apart",
+      "frame": { "width": 25, "height": 23 },
+      "dpt": 32,
+      "tiles": [
+        {
+          "rows": [
+            [6, 6, 8, 3, 0.9, 0, 0.5]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 11.538461538461538, "y": 11.5 },
+          "length": 15.372843405620225,
+          "width": 5.754425858401037,
+          "angle": 0.49859647395006196,
+          "class": "stock",
+          "confidence": 0.8999999761581421
+        }
+      ]
+    },
+    {
+      "name": "the tile origin is added back",
+      "frame": { "width": 96, "height": 40 },
+      "dpt": 32,
+      "tiles": [
+        {
+          "index": 1,
+          "rows": [
+            [10, 8, 6, 3, 0.9, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 52.0, "y": 16.0 },
+          "length": 12.0,
+          "width": 6.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.8999999761581421
+        }
+      ]
+    },
+    {
+      "name": "a car two overlapping tiles see comes back once",
+      "frame": { "width": 96, "height": 40 },
+      "dpt": 32,
+      "tiles": [
+        {
+          "index": 0,
+          "rows": [
+            [24, 10, 12, 4, 0.8, 0, 0]
+          ]
+        },
+        {
+          "index": 1,
+          "rows": [
+            [8.5, 10.2, 12.2, 4, 0.7, 0, 0.01]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 48.0, "y": 20.0 },
+          "length": 24.0,
+          "width": 8.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.800000011920929
+        }
+      ]
+    },
+    {
+      "name": "two cars one tile each sees both stay",
+      "frame": { "width": 96, "height": 40 },
+      "dpt": 32,
+      "tiles": [
+        {
+          "index": 0,
+          "rows": [
+            [6, 10, 10, 4, 0.7, 0, 0]
+          ]
+        },
+        {
+          "index": 1,
+          "rows": [
+            [26, 10, 10, 4, 0.8, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 84.0, "y": 20.0 },
+          "length": 20.0,
+          "width": 8.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.800000011920929
+        },
+        {
+          "centre": { "x": 12.0, "y": 20.0 },
+          "length": 20.0,
+          "width": 8.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.699999988079071
+        }
+      ]
+    },
+    {
+      "name": "the most confident of several boxes on one car stays",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.55, 0, 0],
+            [15.2, 10.1, 12.3, 4.1, 0.83, 0, 0.02],
+            [14.9, 9.9, 11.9, 3.9, 0.46, 0, -0.01]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.199999809265137, "y": 10.100000381469727 },
+          "length": 12.300000190734865,
+          "width": 4.099999904632568,
+          "angle": 0.019999999552965216,
+          "class": "stock",
+          "confidence": 0.8299999833106995
+        }
+      ]
+    },
+    {
+      "name": "removal ignores the class",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.6, 0, 0],
+            [15, 10, 12, 4, 0.8, 1, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock.loco",
+          "confidence": 0.800000011920929
+        }
+      ]
+    },
+    {
+      "name": "coupled cars abut and both stay",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [9, 10, 12, 4, 0.8, 0, 0],
+            [21, 10, 12, 4, 0.7, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 9.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.800000011920929
+        },
+        {
+          "centre": { "x": 21.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.699999988079071
+        }
+      ]
+    },
+    {
+      "name": "cars on parallel tracks both stay",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 5, 12, 4, 0.8, 0, 0],
+            [15, 15, 12, 4, 0.7, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 5.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.800000011920929
+        },
+        {
+          "centre": { "x": 15.0, "y": 15.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.699999988079071
+        }
+      ]
+    },
+    {
+      "name": "an IoU equal to nms_iou is not a duplicate",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [13, 10, 12, 4, 0.8, 0, 0],
+            [17, 10, 12, 4, 0.7, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 13.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.800000011920929
+        },
+        {
+          "centre": { "x": 17.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.699999988079071
+        }
+      ]
+    },
+    {
+      "name": "rotated boxes on one car are one detection",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.8, 0, 0.7],
+            [15.1, 10, 12, 4, 0.7, 0, 0.72]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.6999999880790712,
+          "class": "stock",
+          "confidence": 0.800000011920929
+        }
+      ]
+    },
+    {
+      "name": "crossing boxes are two cars",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.8, 0, 0.7],
+            [15, 10, 12, 4, 0.7, 0, 2.3]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.6999999880790712,
+          "class": "stock",
+          "confidence": 0.800000011920929
+        },
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 12.000000000000002,
+          "width": 4.0,
+          "angle": 2.299999952316284,
+          "class": "stock",
+          "confidence": 0.699999988079071
+        }
+      ]
+    },
+    {
+      "name": "the result is ordered by confidence",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [5, 5, 6, 2, 0.4, 0, 0],
+            [15, 5, 6, 2, 0.9, 0, 0],
+            [25, 5, 6, 2, 0.6, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 5.0 },
+          "length": 6.0,
+          "width": 2.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.8999999761581421
+        },
+        {
+          "centre": { "x": 25.0, "y": 5.0 },
+          "length": 6.0,
+          "width": 2.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.6000000238418579
+        },
+        {
+          "centre": { "x": 5.0, "y": 5.0 },
+          "length": 6.0,
+          "width": 2.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.4000000059604645
+        }
+      ]
+    },
+    {
+      "name": "a box below the threshold removes nothing",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.3, 0, 0],
+            [15.2, 10, 12, 4, 0.1, 0, 0]
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "centre": { "x": 15.0, "y": 10.0 },
+          "length": 12.0,
+          "width": 4.0,
+          "angle": 0.0,
+          "class": "stock",
+          "confidence": 0.30000001192092896
+        }
+      ]
+    },
+    {
+      "name": "an output of the wrong width is refused",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "dims": [1, 300, 6]
+        }
+      ],
+      "error": "output"
+    },
+    {
+      "name": "an output with no batch dimension is refused",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "dims": [300, 7]
+        }
+      ],
+      "error": "output"
+    },
+    {
+      "name": "a class index past the list is refused",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.9, 2, 0]
+          ]
+        }
+      ],
+      "error": "class"
+    },
+    {
+      "name": "a negative class index is refused",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.9, -1, 0]
+          ]
+        }
+      ],
+      "error": "class"
+    },
+    {
+      "name": "a refused class below the threshold does not matter",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "tiles": [
+        {
+          "rows": [
+            [15, 10, 12, 4, 0.1, 7, 0]
+          ]
+        }
+      ],
+      "expected": []
+    }
+  ]
+}

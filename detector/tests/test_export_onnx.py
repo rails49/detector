@@ -1,16 +1,23 @@
+import json
+import shutil
+import sys
+
 import onnx
 import pytest
 import yaml
 from onnx import TensorProto, helper
 from PIL import Image
 
+import export_onnx
 from export_onnx import (
+    R49_DATA,
     REPO,
     FrameCalibrationReader,
     calibration_images,
     check_input_shape,
     copy_metadata,
     input_shape,
+    write_runtime_config,
 )
 
 CANVAS = yaml.safe_load((REPO / "config.yaml").read_text())["detector"]["canvas"]
@@ -60,7 +67,10 @@ def graph_with_input(path, shape):
     graph = helper.make_graph(
         [helper.make_node("Identity", ["images"], ["y"])], "g", [x], [y]
     )
-    onnx.save(helper.make_model(graph), str(path))
+    model = helper.make_model(
+        graph, opset_imports=[helper.make_opsetid("", 17)], ir_version=8
+    )
+    onnx.save(model, str(path))
     return path
 
 
@@ -89,3 +99,82 @@ def test_calibration_refuses_a_tile_that_is_not_the_canvas(tmp_path):
     Image.new("RGB", (8, 4)).save(tile)
     with pytest.raises(SystemExit, match="canvas"):
         FrameCalibrationReader._preprocess(tile, 8)
+
+
+def test_the_file_beside_a_model_holds_config_yaml_and_the_gauge(tmp_path):
+    written = write_runtime_config(tmp_path / "detector.onnx")
+    assert written == tmp_path / "detector.json"
+
+    config = yaml.safe_load((REPO / "config.yaml").read_text())
+    detector = config["detector"]
+    assert json.loads(written.read_text()) == {
+        "canvas": detector["canvas"],
+        "dpt": detector["dpt"],
+        "tile_overlap_mm": detector["tile_overlap_mm"],
+        "confidence_threshold": detector["confidence_threshold"],
+        "nms_iou": detector["nms_iou"],
+        "classes": detector["classes"],
+        "standard_width": config["layout"]["standard_width"],
+        "standard_gauge": json.loads(R49_DATA.read_text())["standard_gauge"],
+    }
+
+
+def test_the_file_beside_a_model_has_the_fields_the_run_time_loads(tmp_path):
+    # rails49-detector loads conformance/model.json with the reader that refuses
+    # a missing or an extra field.
+    written = write_runtime_config(tmp_path / "detector.onnx")
+    shared = json.loads((REPO / "conformance" / "model.json").read_text())
+    assert set(json.loads(written.read_text())) == set(shared)
+
+
+def fake_training(tmp_path, monkeypatch):
+    """Weights whose export writes a graph at the canvas, and return their path."""
+    weights = tmp_path / "best.pt"
+    weights.touch()
+
+    class FakeYolo:
+        def __init__(self, _weights):
+            pass
+
+        def export(self, **_options):
+            return graph_with_input(tmp_path / "best.onnx", [1, 3, CANVAS, CANVAS])
+
+    monkeypatch.setattr(export_onnx, "YOLO", FakeYolo)
+    return weights
+
+
+def test_each_model_gets_its_own_file(tmp_path, monkeypatch):
+    weights = fake_training(tmp_path, monkeypatch)
+    out = tmp_path / "models"
+
+    def fake_quantize(model_input, model_output, **_options):
+        shutil.copy(model_input, model_output)
+
+    monkeypatch.setattr(export_onnx, "calibration_images", lambda *_args: [])
+    monkeypatch.setattr(export_onnx, "quantize_static", fake_quantize)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["export_onnx.py", "--onnx-only", "--weights", str(weights), "--out", str(out)],
+    )
+    export_onnx.main()
+
+    assert sorted(p.name for p in out.iterdir()) == [
+        "detector.json",
+        "detector.onnx",
+        "detector_int8.json",
+        "detector_int8.onnx",
+    ]
+
+
+def test_float_stops_after_the_fp32_model_and_its_file(tmp_path, monkeypatch):
+    weights = fake_training(tmp_path, monkeypatch)
+    out = tmp_path / "models"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["export_onnx.py", "--float", "--weights", str(weights), "--out", str(out)],
+    )
+    export_onnx.main()
+
+    assert sorted(p.name for p in out.iterdir()) == ["detector.json", "detector.onnx"]

@@ -1,7 +1,7 @@
 # Detector — YOLO26n-OBB
 
 Fine-tunes an oriented-box detector on rolling stock and exports it for the
-browser, in its own `uv` environment.
+browser and the occupancy service, in its own `uv` environment.
 
 No model has been released. The corpus is
 [`rails49/r49`](https://github.com/rails49/r49)'s `archives/`; the current model
@@ -35,10 +35,13 @@ uv run python detect.py runs/tracer/weights/best.pt <archive.r49> --dpt <dpt> --
 
 # 3. .pt -> ONNX -> static INT8 -> .ort
 uv run python export_onnx.py
+#    or stop at the FP32 detector.onnx, which the occupancy service loads
+uv run python export_onnx.py --float
 ```
 
 `train.py` writes to `runs/`, `export_onnx.py` to `models/`. Both are
-gitignored.
+gitignored. Beside each model `export_onnx.py` writes `<model stem>.json`, the
+values `rails49-detector` reads (`SPEC.md` § The JSON file beside a model).
 
 ## Three export findings that are easy to rediscover the hard way
 

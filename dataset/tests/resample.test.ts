@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { resample, type Frame, type Pixels } from '@rails49/detector';
@@ -81,6 +82,29 @@ describe('resample against sharp’s resize from raw pixels', () => {
     const d = difference(resample(src, size), await sharpResize(src, size));
     expect(d.max).toBeLessThanOrEqual(2);
     expect(d.mean).toBeLessThanOrEqual(0.18);
+  });
+});
+
+describe('the shared resample fixtures', () => {
+  const fixtures = JSON.parse(readFileSync(new URL('../../conformance/resample.json', import.meta.url), 'utf8')) as {
+    tolerance: number;
+    source: Frame & { rgb: string };
+    cases: { name: string; size: Frame; rgb: string }[];
+  };
+
+  it.each(fixtures.cases)('still match sharp at $name', async ({ size, rgb: expected }) => {
+    const { rgb: source, width, height } = fixtures.source;
+    const actual = await sharp(Buffer.from(source, 'base64'), { raw: { width, height, channels: 3 } })
+      .resize(size.width, size.height)
+      .raw()
+      .toBuffer();
+    const want = Buffer.from(expected, 'base64');
+    expect(actual.length).toBe(want.length);
+    let worst = 0;
+    actual.forEach((value, i) => {
+      worst = Math.max(worst, Math.abs(value - want[i]!));
+    });
+    expect(worst).toBeLessThanOrEqual(fixtures.tolerance);
   });
 });
 
