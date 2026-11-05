@@ -1,6 +1,6 @@
 [project]
 name = "rails49-detector"
-version = "0.0.1"
+version = "0.0.2"
 description = "The rails49 occupancy detector's runtime in Python: frame to L0, with no Torch"
 readme = "README.md"
 license = "AGPL-3.0-only"
