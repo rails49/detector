@@ -1,6 +1,6 @@
 {
   "name": "@rails49/detector",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "The rails49 occupancy detector: its browser runtime, car geometry and, once one is measured, the model",
   "license": "AGPL-3.0-only",
   "repository": {
