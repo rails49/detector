@@ -5,7 +5,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "export:yolo": "tsx src/yolo_export.ts"
+    "export:yolo": "tsx src/yolo_export.ts",
+    "conformance:resample": "tsx src/conformance_resample.ts"
   },
   "dependencies": {
     "@detector/config": "workspace:*",

@@ -20,11 +20,15 @@ Each directory is a stage in one data path.
                 │                     ── detector/detect.py: detections drawn on an unlabeled archive
                 │  detector/export_onnx.py ONNX → static INT8 → .ort
                 ▼
-            detector/models/             detector_int8.ort (not in git)
+            detector/models/             detector.onnx, detector_int8.ort, each with
+                │                        a JSON file (not in git)
+                ├─▶ lib/detector/         loadDetector → L0
+                │       │
+                │       └─▶ occupancy's ui/   occupancy() → L1
                 │
-                └─▶ lib/detector/         loadDetector → L0
+                └─▶ lib/detector-py/      Detector → L0
                         │
-                        └─▶ occupancy's ui/   occupancy() → L1
+                        └─▶ occupancy-service
 ```
 
 The archives live in [`rails49/r49`](https://github.com/rails49/r49), not here
@@ -37,7 +41,10 @@ to raw pixels and resizes those with sharp's default (`dataset/src/yolo_pixels.t
 `resample` in the `@rails49/detector` root reproduces that resize in code,
 within 2 per channel, and `detect` uses it rather than the 2D canvas, whose
 filter each user agent picks (#7). Enlarging, which training never does,
-`resample` uses the same kernel with no training counterpart.
+`resample` uses the same kernel with no training counterpart. `rails49-detector`
+resamples through `pyvips`, the library sharp is built on. `conformance/` holds
+the cases both runtimes read, and `conformance/README.md` says how they relate
+to sharp.
 
 `dataset/README.md` covers the export and its gates. `detector/README.md`
 covers training and export.
@@ -68,7 +75,9 @@ base of `HEAD` and `origin/main`, so a reorder or a removal fails the gate
 
 `pnpm-workspace.yaml` covers `lib/*` and `dataset`. `@rails49/detector` is
 built to `dist/` and published from a tag (`README.md` § Releasing); the other
-`lib/*` packages are consumed as TypeScript source and not published.
+TypeScript packages under `lib/` are consumed as source and not published.
+`lib/detector-py` is a Python package with its own `uv` environment, published
+from the same tag as `rails49-detector`.
 `lib/CLAUDE.md` holds their interface rules. The `.r49` format package,
 `@rails49/r49`, comes from npm at the version `pnpm-workspace.yaml` pins
 (org [ADR-0022](https://github.com/rails49/.github/blob/main/docs/adr/0022-the-r49-format-is-r49s-and-each-consumer-pins-it.md)).
@@ -89,3 +98,6 @@ The detector package's build copies `detector/models/detector_int8.ort` into
 ([occupancy ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md)).
 With no model the build copies nothing, and the packed package has no
 `./model` entry.
+
+`rails49-detector`'s wheel holds no model. A person attaches one to a release
+(`README.md` § Attaching a model to a release).

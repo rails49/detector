@@ -1,0 +1,113 @@
+{
+  "tolerance": 1e-12,
+  "cases": [
+    {
+      "name": "a frame at the target DPT keeps its size, one tile at 0",
+      "frame": { "width": 30, "height": 20 },
+      "dpt": 16,
+      "scale": 1,
+      "size": { "width": 30, "height": 20 },
+      "tiles": [
+        { "x": 0, "y": 0, "width": 30, "height": 20 }
+      ]
+    },
+    {
+      "name": "a frame above the target DPT scales down",
+      "frame": { "width": 60, "height": 40 },
+      "dpt": 32,
+      "scale": 0.5,
+      "size": { "width": 30, "height": 20 },
+      "tiles": [
+        { "x": 0, "y": 0, "width": 30, "height": 20 }
+      ]
+    },
+    {
+      "name": "a frame below the target DPT scales up",
+      "frame": { "width": 15, "height": 10 },
+      "dpt": 8,
+      "scale": 2,
+      "size": { "width": 30, "height": 20 },
+      "tiles": [
+        { "x": 0, "y": 0, "width": 30, "height": 20 }
+      ]
+    },
+    {
+      "name": "a fractional DPT rounds the size",
+      "frame": { "width": 37, "height": 29 },
+      "dpt": 18.5,
+      "scale": 0.8648648648648649,
+      "size": { "width": 32, "height": 25 },
+      "tiles": [
+        { "x": 0, "y": 0, "width": 32, "height": 25 }
+      ]
+    },
+    {
+      "name": "a size ending in .5 rounds up on both axes",
+      "frame": { "width": 25, "height": 23 },
+      "dpt": 32,
+      "scale": 0.5,
+      "size": { "width": 13, "height": 12 },
+      "tiles": [
+        { "x": 0, "y": 0, "width": 13, "height": 12 }
+      ]
+    },
+    {
+      "name": "the canvas square is one tile",
+      "frame": { "width": 32, "height": 32 },
+      "dpt": 16,
+      "scale": 1,
+      "size": { "width": 32, "height": 32 },
+      "tiles": [
+        { "x": 0, "y": 0, "width": 32, "height": 32 }
+      ]
+    },
+    {
+      "name": "two tiles across, each padded at the bottom",
+      "frame": { "width": 96, "height": 40 },
+      "dpt": 32,
+      "scale": 0.5,
+      "size": { "width": 48, "height": 20 },
+      "tiles": [
+        { "x": 0, "y": 0, "width": 32, "height": 20 },
+        { "x": 16, "y": 0, "width": 32, "height": 20 }
+      ]
+    },
+    {
+      "name": "a tile origin ending in .5 rounds up",
+      "frame": { "width": 53, "height": 20 },
+      "dpt": 16,
+      "scale": 1,
+      "size": { "width": 53, "height": 20 },
+      "tiles": [
+        { "x": 0, "y": 0, "width": 32, "height": 20 },
+        { "x": 11, "y": 0, "width": 32, "height": 20 },
+        { "x": 21, "y": 0, "width": 32, "height": 20 }
+      ]
+    },
+    {
+      "name": "a grid runs row by row",
+      "frame": { "width": 80, "height": 60 },
+      "dpt": 16,
+      "scale": 1,
+      "size": { "width": 80, "height": 60 },
+      "tiles": [
+        { "x": 0, "y": 0, "width": 32, "height": 32 },
+        { "x": 16, "y": 0, "width": 32, "height": 32 },
+        { "x": 32, "y": 0, "width": 32, "height": 32 },
+        { "x": 48, "y": 0, "width": 32, "height": 32 },
+        { "x": 0, "y": 14, "width": 32, "height": 32 },
+        { "x": 16, "y": 14, "width": 32, "height": 32 },
+        { "x": 32, "y": 14, "width": 32, "height": 32 },
+        { "x": 48, "y": 14, "width": 32, "height": 32 },
+        { "x": 0, "y": 28, "width": 32, "height": 32 },
+        { "x": 16, "y": 28, "width": 32, "height": 32 },
+        { "x": 32, "y": 28, "width": 32, "height": 32 },
+        { "x": 48, "y": 28, "width": 32, "height": 32 }
+      ]
+    }
+  ],
+  "car_width": [
+    { "dpt": 16, "px": 33.44947735191638 },
+    { "dpt": 32.55, "px": 68.04878048780486 }
+  ]
+}

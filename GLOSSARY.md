@@ -1,6 +1,6 @@
 # detector
 
-The detector side of [rails49 occupancy](https://github.com/rails49/occupancy): car labels are turned into training data, a detector is trained on them, and a browser runtime runs it. Terms this repository uses but does not own are in occupancy's [GLOSSARY.md](https://github.com/rails49/occupancy/blob/main/GLOSSARY.md) and r49's [GLOSSARY.md](https://github.com/rails49/r49/blob/main/GLOSSARY.md).
+The detector side of [rails49 occupancy](https://github.com/rails49/occupancy): car labels are turned into training data, a detector is trained on them, and a browser or Python runtime runs it. Terms this repository uses but does not own are in occupancy's [GLOSSARY.md](https://github.com/rails49/occupancy/blob/main/GLOSSARY.md) and r49's [GLOSSARY.md](https://github.com/rails49/r49/blob/main/GLOSSARY.md).
 
 ## Language
 

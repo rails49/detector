@@ -26,12 +26,17 @@ All three were verified end-to-end on the released DOTA weights during the
 feasibility research (rails49/occupancy#3); this script is that path, run on trained
 weights instead. Expect ~3.3 MiB out.
 
-With `--onnx-only` the script stops after the INT8 ONNX file, which
-`evaluate.py` scores. `--data` names the dataset root whose training tiles
-calibrate, at the model's DPT.
+A JSON file beside each model, `<model stem>.json`, holds the values a runtime
+needs (`write_runtime_config`). `.ort` shares the one beside the INT8 ONNX file.
+
+With `--float` the script stops after the FP32 `detector.onnx`, which the
+occupancy service loads through `rails49-detector`. With `--onnx-only` it stops
+after the INT8 ONNX file, which `evaluate.py` scores. `--data` names the dataset
+root whose training tiles calibrate, at the model's DPT.
 
 Usage:
     uv run python export_onnx.py [--weights runs/tracer/weights/best.pt]
+    uv run python export_onnx.py --float
     uv run python export_onnx.py --weights runs/both-l/weights/best.pt --onnx-only \\
         --out runs/both-l/int8
 """
@@ -39,6 +44,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -60,6 +66,7 @@ from ultralytics import YOLO
 
 HERE = Path(__file__).parent
 REPO = HERE.parent
+R49_DATA = REPO / "node_modules" / "@rails49" / "r49" / "dist" / "data.json"
 
 
 def _detector_config() -> dict:
@@ -104,6 +111,25 @@ def copy_metadata(source: Path, target: Path) -> None:
 def confidence_threshold() -> float:
     """`detector.confidence_threshold` — the score below which a slot is padding."""
     return float(_detector_config()["confidence_threshold"])
+
+
+def write_runtime_config(model: Path) -> Path:
+    """Write the JSON file beside `model` that a runtime reads, and return its path."""
+    config = yaml.safe_load((REPO / "config.yaml").read_text())
+    detector = config["detector"]
+    path = model.with_suffix(".json")
+    fields = {
+        "canvas": detector["canvas"],
+        "dpt": detector["dpt"],
+        "tile_overlap_mm": detector["tile_overlap_mm"],
+        "confidence_threshold": detector["confidence_threshold"],
+        "nms_iou": detector["nms_iou"],
+        "classes": detector["classes"],
+        "standard_width": config["layout"]["standard_width"],
+        "standard_gauge": json.loads(R49_DATA.read_text())["standard_gauge"],
+    }
+    path.write_text(json.dumps(fields, indent=2) + "\n")
+    return path
 
 
 class FrameCalibrationReader(CalibrationDataReader):
@@ -174,6 +200,12 @@ def main() -> None:
         help="Ten sufficed in the rails49/occupancy#3 research; more costs quantization time for little gain.",
     )
     parser.add_argument(
+        "--float",
+        action="store_true",
+        dest="float_only",
+        help="Stop after the FP32 detector.onnx, which the occupancy service loads.",
+    )
+    parser.add_argument(
         "--onnx-only",
         action="store_true",
         help="Stop after the INT8 ONNX file, which evaluate.py scores.",
@@ -211,7 +243,10 @@ def main() -> None:
     fp32 = args.out / "detector.onnx"
     shutil.move(str(exported), fp32)
     check_input_shape(fp32)
+    write_runtime_config(fp32)
     print(f"   {fp32.name}  {fp32.stat().st_size / 1024 / 1024:.2f} MiB")
+    if args.float_only:
+        return
 
     # 2. Static INT8.
     input_name = (
@@ -249,6 +284,7 @@ def main() -> None:
         op_types_to_quantize=["Conv"],
     )
     copy_metadata(fp32, int8)
+    write_runtime_config(int8)
     print(f"   {int8.name}  {int8.stat().st_size / 1024 / 1024:.2f} MiB")
     if args.onnx_only:
         return

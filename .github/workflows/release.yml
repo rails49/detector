@@ -1,6 +1,6 @@
-# A pushed tag vX.Y.Z publishes @rails49/detector to npm through trusted
-# publishing, then makes a GitHub Release. The steps a person takes are in
-# README.md § Releasing.
+# A pushed tag vX.Y.Z publishes @rails49/detector to npm and rails49-detector to
+# PyPI through trusted publishing, then makes a GitHub Release. The steps a person
+# takes are in README.md § Releasing.
 name: release
 
 on:
@@ -14,8 +14,8 @@ concurrency:
   group: release
 
 jobs:
-  # Builds and checks the package once, and hands that same tarball to the
-  # publish job.
+  # Builds and checks the packages once, and hands those same files to the
+  # publish jobs.
   build:
     runs-on: ubuntu-latest
     steps:
@@ -39,6 +39,11 @@ jobs:
             echo "$GITHUB_REF_NAME does not match @rails49/detector's version $version; nothing is published" >&2
             exit 1
           fi
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' lib/detector-py/pyproject.toml)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "$GITHUB_REF_NAME does not match rails49-detector's version $version; nothing is published" >&2
+            exit 1
+          fi
 
       - uses: pnpm/action-setup@v6
 
@@ -47,12 +52,18 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      # CI holds no model, so this publishes the runtime alone.
-      - name: Build and check the package
+      # Pinned as in ci.yml.
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          enable-cache: true
+
+      # CI holds no model, so this publishes the runtimes alone.
+      - name: Build and check the packages
         run: |
           pnpm install --frozen-lockfile --filter "@rails49/detector..."
           pnpm --filter @rails49/detector build
           bin/check-package.sh "$RUNNER_TEMP/package"
+          bin/check-wheel.sh "$RUNNER_TEMP/wheel"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -60,7 +71,13 @@ jobs:
           path: ${{ runner.temp }}/package
           if-no-files-found: error
 
-  # A failed publish is fixed by re-running this job; the tarball does not change.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheel
+          path: ${{ runner.temp }}/wheel
+          if-no-files-found: error
+
+  # A failed publish is fixed by re-running its job; the files do not change.
   npm:
     needs: build
     runs-on: ubuntu-latest
@@ -86,8 +103,24 @@ jobs:
 
       - run: npm publish "$RUNNER_TEMP"/package/*.tgz
 
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: wheel
+          path: ${{ runner.temp }}/wheel
+
+      - uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: ${{ runner.temp }}/wheel
+
   github-release:
-    needs: npm
+    needs: [npm, pypi]
     runs-on: ubuntu-latest
     permissions:
       contents: write

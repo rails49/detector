@@ -1,13 +1,17 @@
 # Shared Libraries
 
-All written in TypeScript. `detector` is built and published as
-`@rails49/detector`; the others are consumed as source. `dataset/` is the only
-consumer here; occupancy's UI depends on `detector`.
+All written in TypeScript except `detector-py`. `detector` is built and
+published as `@rails49/detector`, `detector-py` as `rails49-detector`, and `config`
+is consumed as source. `dataset/` is the only consumer here; occupancy's UI
+depends on `detector`.
 
 * `detector` : car boxes — the YOLO OBB session (browser), the L0 decode, and
   the span→box construction the exporter uses. L1 is in occupancy's UI
   (`ui/src/occupancy.ts`, [occupancy ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md))
 * `config` : **generated** from `config.yaml` — layout and detector constants
+* `detector-py` : the runtime in Python, imported as `detector`. It reads the JSON file beside a model, not `config.yaml`,
+  and shares its test cases with `detector` through `conformance/`. The interface
+  convention below is TypeScript's; here `__init__.py` is the interface
 
 ## `config` is generated, and committed
 

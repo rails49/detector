@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 The detector side of [rails49/occupancy](https://github.com/rails49/occupancy):
-training-data export, YOLO training, and the browser runtime that runs the
-detector.
+training-data export, YOLO training, and the two runtimes of the detector: the
+browser's and the occupancy service's in Python.
 
 The detector sometimes misses rolling stock or reports phantom trains. Present
 nothing here as a safety interlock.
@@ -17,6 +17,7 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 - How the stages fit together, configuration, models: `docs/SYSTEM.md`.
 - Terms: `GLOSSARY.md`. Decisions: `docs/adr/`. Requirements: `SPEC.md`.
 - Before touching `lib/`, read `lib/CLAUDE.md`.
+- Cases both runtimes read: `conformance/`.
 - The UI, L1, drift and the deploy are in
   [rails49/occupancy](https://github.com/rails49/occupancy).
 
@@ -37,8 +38,10 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 - The model filename is written only in `lib/detector`: its `./model` exports
   entry and `DETECTOR_MODEL_FILE` (`lib/detector/tests/model.test.ts`).
   Occupancy's UI resolves the entry and imports the constant.
-- `@rails49/detector` is published from a tag, and which version may carry a
-  model is set in `README.md` § Releasing.
+- `@rails49/detector` and `rails49-detector` are published from one tag at one
+  version, and which version may carry a model is set in `README.md` § Releasing.
+- A change to what `lib/detector` does at run time is a change to
+  `lib/detector-py` too, and to `conformance/`.
 - `lib/detector/src/generated.ts` is generated too (`docs/SYSTEM.md` §
   Configuration).
 - Try a change in occupancy with occupancy's `bin/with-detector.sh`

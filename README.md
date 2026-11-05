@@ -3,8 +3,8 @@
 The detector side of [rails49 occupancy](https://github.com/rails49/occupancy),
 which detects track occupancy on a model railroad from an overhead camera. This
 repository holds the training-data export, YOLO training, the model, and the
-browser runtime that runs the detector. The UI, the live view and the
-deploy are in occupancy.
+two runtimes of the detector: one in the browser and one in Python. The UI, the
+live view and the deploy are in occupancy.
 
 **WARNING**: The detector sometimes misses rolling stock and sometimes reports
 trains where there are none. It is not a safety interlock. Responsibility for
@@ -13,7 +13,8 @@ safe operation rests with the user.
 `lib/detector` is [`@rails49/detector`](https://www.npmjs.com/package/@rails49/detector)
 on npm, the package occupancy's UI depends on
 ([occupancy ADR 0019](https://github.com/rails49/occupancy/blob/main/docs/adr/0019-detection-and-training-move-to-rails49-detector.md)).
-No model has been released.
+`lib/detector-py` is `rails49-detector` on PyPI, the same runtime with no Torch,
+for the occupancy service. No model has been released.
 
 ## Development
 
@@ -30,7 +31,9 @@ noted.
 | All TS tests | `pnpm test` |
 | Tests for one package | `pnpm --filter @rails49/detector test` |
 | Regenerate `config.json` and `lib/config` | `pnpm config:generate` |
-| Python lint, format, types | `cd detector && uv run ruff check . && uv run black --check . && uv run pyright` |
+| Python lint, format, types | `cd detector && uv run ruff check . && uv run black --check . && uv run pyright`; the same in `lib/detector-py` |
+| `rails49-detector`'s tests | `cd lib/detector-py && uv sync --all-extras && uv run pytest` |
+| Rewrite the resample cases from the installed sharp | `pnpm --filter dataset run conformance:resample` (see [conformance/README.md](conformance/README.md)) |
 | Derive the detector dataset | `pnpm --filter dataset run export:yolo -- --in <dir> [--dpt <n>]` (writes `dataset/yolo/`; see [dataset/README.md](dataset/README.md)) |
 | Fine-tune, measure and export the detector | `cd detector && uv run python train.py --epochs 20 && uv run python evaluate.py runs/tracer/weights/best.pt && uv run python export_onnx.py` (see [detector/README.md](detector/README.md)) |
 | Draw a model's detections on a new, unlabeled archive | `cd detector && uv run python detect.py runs/<name>/weights/best.pt <archive.r49> --dpt <dpt> --out <dir>` (see [detector/README.md](detector/README.md)) |
@@ -39,10 +42,12 @@ noted.
 
 ## Releasing
 
-A tag `vX.Y.Z` on `main` publishes `@rails49/detector` `X.Y.Z` to npm through
-trusted publishing, then makes a GitHub Release with generated notes.
+A tag `vX.Y.Z` on `main` publishes `@rails49/detector` `X.Y.Z` to npm and
+`rails49-detector` `X.Y.Z` to PyPI through trusted publishing, then makes a GitHub
+Release with generated notes.
 
-1. In a pull request, set the version in `lib/detector/package.json`.
+1. In a pull request, set the same version in `lib/detector/package.json` and
+   `lib/detector-py/pyproject.toml`.
 2. Merge it.
 3. With the merge commit checked out, run occupancy's gate against it
    (`bin/with-detector.sh`, see [Development](#development)).
@@ -54,14 +59,30 @@ trusted publishing, then makes a GitHub Release with generated notes.
    ```
 
 The [release workflow](.github/workflows/release.yml) publishes nothing for a
-tag that is not `vX.Y.Z`, not on `main`, or not the package's version. It
-publishes the tarball `bin/check-package.sh` checked. npm does not accept a
-version twice; a failed publish is fixed by re-running its job.
+tag that is not `vX.Y.Z`, not on `main`, or not both packages' version. It
+publishes the tarball `bin/check-package.sh` checked and the files
+`bin/check-wheel.sh` checked. Neither registry accepts a version twice; a failed
+publish is fixed by re-running its job.
 
-CI holds no model, so a release carries the runtime alone. Releases without a
+PyPI needs a trusted publisher for `rails49-detector` before the first publish:
+repository `rails49/detector`, workflow `release.yml`, environment `release`.
+
+CI holds no model, so a release carries the runtimes alone. Releases without a
 model are `0.0.x`. The first release with a model is `0.1.0`, and it waits for
 a model measured on held-out images: nothing automated decides that a model is
 good enough (ADR 0007).
+
+### Attaching a model to a release
+
+A person who has decided a model is good enough exports it and attaches the FP32 file and its JSON file to the GitHub Release:
+
+```sh
+cd detector
+uv run python export_onnx.py --weights runs/<name>/weights/best.pt --float
+gh release upload vX.Y.Z models/detector.onnx models/detector.json
+```
+
+The occupancy service loads the two files from one directory.
 
 ## Contributing
 

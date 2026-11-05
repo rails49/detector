@@ -1,0 +1,13 @@
+{
+  "canvas": 32,
+  "dpt": 16,
+  "tile_overlap_mm": 1000,
+  "confidence_threshold": 0.25,
+  "nms_iou": 0.5,
+  "classes": [
+    "stock",
+    "stock.loco"
+  ],
+  "standard_width": 3000.0,
+  "standard_gauge": 1435.0
+}
