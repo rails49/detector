@@ -46,7 +46,11 @@ jobs:
         with:
           enable-cache: true
 
+      # onnxruntime-node's postinstall fetches CUDA binaries the detector never
+      # loads, from a release asset that answers 404 (#85).
       - run: pnpm install --frozen-lockfile
+        env:
+          ONNXRUNTIME_NODE_INSTALL_CUDA: skip
 
       # The same script the pre-push hook runs, unexpanded, so the two gates
       # cannot drift apart.
