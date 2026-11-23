@@ -24,7 +24,7 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 ## Traps
 
 - `main` takes changes only through a PR that passes the `ci` check,
-  squash-merged by hand or rebase-merged by implement-loop. Start each issue on
+  squash- or rebase-merged. Start each issue on
   a new branch from `origin/main`:
   `git fetch -q origin && git switch --no-track -c <issue>-<slug> origin/main`.
   Every code change passes the gate and the `code-review` skill before its PR.
