@@ -11,7 +11,7 @@ gate: pnpm install --frozen-lockfile && bin/test.sh
 
 ## Where things are
 
-What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/blob/main/docs/adr/0021-each-fact-has-one-owner-and-the-glossary-is-glossary-md.md). See `docs/agents/domain.md`.
+What each kind of doc holds: org [ADR-0025](https://github.com/rails49/.github/blob/main/docs/adr/0025-each-fact-has-one-owner-and-an-adr-is-written-after-its-decision-has-run.md). See `docs/agents/domain.md`.
 
 - Commands: `README.md`.
 - How the stages fit together, configuration, models: `docs/SYSTEM.md`.
@@ -23,10 +23,9 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 
 ## Traps
 
-- `main` takes changes only through a PR that passes the `ci` check,
-  squash- or rebase-merged. Start each issue on
-  a new branch from `origin/main`:
-  `git fetch -q origin && git switch --no-track -c <issue>-<slug> origin/main`.
+- `main` takes changes only through a rebase-merged PR that passes the `ci`
+  check. Start each issue on a new branch `<issue>-<slug>` from `origin/main`,
+  in a worktree: this checkout stays on `main`.
   Every code change passes the gate and the `code-review` skill before its PR.
 - `SPEC.md` describes the target. Where it or an ADR disagrees with the code,
   the gap is the planned migration; leave it unless the task is that
@@ -57,14 +56,14 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 
 ## Agent skills
 
-### Issue tracker
+The rules every rails49 repository shares are the organisation's
+[`docs/agents/`](https://github.com/rails49/.github/tree/main/docs/agents):
+`issue-tracker.md`, `triage-labels.md` and `domain.md`.
 
-Issues live in GitHub Issues on `rails49/detector`, driven via the `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-The five canonical triage roles, used verbatim as label strings. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single context: `GLOSSARY.md`, `docs/adr/` and `SPEC.md`. See `docs/agents/domain.md`.
+- Issue tracker: GitHub Issues on rails49/detector, via the `gh` CLI. Issues
+  from before the split from rails49/occupancy:
+  `docs/agents/issue-tracker.md`.
+- Triage labels: `needs-triage`, `needs-info`, `ready-for-agent`,
+  `ready-for-human`, `wontfix`.
+- Domain docs: `GLOSSARY.md`, `docs/adr/` and `SPEC.md`. What detector adds:
+  `docs/agents/domain.md`.
